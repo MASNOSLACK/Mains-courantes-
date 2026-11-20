@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Tri Mains Courantes — Google Drive & Gemini</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-2: #273449;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+      padding: 12px 12px calc(24px + env(safe-area-inset-bottom));
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 4px 2px;
+    }
+
+    h1 {
+      font-size: 1.2rem;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .badge.ok { color: #34d399; border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.1); }
+    .badge.warn { color: #fbbf24; border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.1); }
+    .badge.err { color: #f87171; border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.1); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .card-title {
+      font-size: 0.98rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 640px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0b1220;
+      color: var(--text);
+      font-size: 0.92rem;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: var(--primary);
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 0.05s ease, opacity 0.15s ease, background 0.15s ease;
+      touch-action: manipulation;
+    }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+    .btn-success { background: var(--success); color: #052e16; }
+    .btn-warn { background: var(--warn); color: #451a03; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-ghost {
+      background: var(--card-2);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-sm { padding: 7px 10px; font-size: 0.8rem; }
+    .btn-grow { flex: 1 1 140px; }
+
+    /* Sticky mobile progress card */
+    .progress-sticky {
+      position: sticky;
+      top: 8px;
+      z-index: 20;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 14px;
+      background: #0b1220;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #10b981);
+      transition: width 0.25s ease;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.84rem;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .stat-box {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 6px;
+      text-align: center;
+    }
+    .stat-val { font-size: 1.1rem; font-weight: 800; }
+    .stat-lbl { font-size: 0.7rem; color: var(--muted); }
+
+    .preview-box {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    @media (min-width: 560px) {
+      .preview-box { grid-template-columns: 160px 1fr; align-items: center; }
+    }
+    .preview-thumb {
+      width: 100%;
+      max-height: 180px;
+      object-fit: contain;
+      background: #020617;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+
+    .log-item {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-left-width: 4px;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 0.84rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .log-item.ok { border-left-color: var(--success); }
+    .log-item.check { border-left-color: var(--warn); }
+    .log-item.err { border-left-color: var(--danger); }
+
+    .log-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-weight: 700;
+    }
+
+    .log-sub { color: var(--muted); font-size: 0.78rem; word-break: break-word; }
+    a { color: #60a5fa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: #0b1220;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .hidden { display: none !important; }
+
+    /* Modal Explorateur Drive */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.82);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+    }
+    .modal {
+      width: 100%;
+      max-width: 540px;
+      max-height: 85dvh;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .folder-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 180px;
+    }
+    .folder-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 10px;
+      background: #0b1220;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .folder-row:hover { border-color: var(--primary); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📋 Tri Mains Courantes</h1>
+      <span id="authBadge" class="badge">⚪ Non connecté</span>
+    </header>
+
+    <!-- 1. CONFIGURATION & OAUTH -->
+    <section class="card">
+      <div class="card-header" onclick="toggleConfig()">
+        <h2 class="card-title">⚙️ Connexion Google Drive & Gemini</h2>
+        <span id="configChevron" class="badge">Afficher / Masquer</span>
+      </div>
+
+      <div id="configBody" style="display:flex; flex-direction:column; gap:10px;">
+        <div class="grid-2">
+          <label>
+            Google OAuth Client ID (Application Web)
+            <input id="clientIdInput" type="text" placeholder="123456789-xxx.apps.googleusercontent.com" autocomplete="off" />
+          </label>
+          <label>
+            Clé API Gemini (Google AI Studio)
+            <input id="geminiKeyInput" type="password" placeholder="AIzaSy..." autocomplete="off" />
+          </label>
+        </div>
+
+        <div class="grid-2">
+          <label>
+            Modèle Gemini
+            <select id="modelSelect">
+              <option value="gemini-4-hydrogen">gemini-4-hydrogen (Recommandé — très précis)</option>
+              <option value="gemini-3.8-flash">gemini-3.8-flash (Rapide & équilibré)</option>
+              <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Ultra économique)</option>
+            </select>
+          </label>
+          <label>
+            Qualité JPEG d'export
+            <select id="jpegQualitySelect">
+              <option value="0.92">Haute qualité (92%)</option>
+              <option value="0.85">Équilibrée mobile (85%)</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="hint">
+          Origine JavaScript autorisée à ajouter dans Google Cloud Console :
+          <strong id="originDisplay"></strong>
+          <button type="button" class="btn-ghost btn-sm" style="margin-left:6px;" onclick="copyOrigin()">Copier</button>
+        </div>
+
+        <div class="btn-row">
+          <button id="saveConfigBtn" class="btn-ghost" onclick="saveConfig()">💾 Sauvegarder</button>
+          <button id="connectBtn" class="btn-primary btn-grow" onclick="connectGoogle(true)">🔐 Connexion Google Drive</button>
+          <button id="disconnectBtn" class="btn-ghost hidden" onclick="disconnectGoogle()">Déconnexion</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. SELECTION DU DOSSIER -->
+    <section class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+        <h2 class="card-title">📁 Dossier source Google Drive</h2>
+        <span id="folderStatusBadge" class="badge">En attente de connexion</span>
+      </div>
+
+      <div id="selectedFolderBox" class="hint" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+        <div>
+          Dossier ciblé : <strong id="selectedFolderName">Aucun</strong>
+          <div id="selectedFolderPath" style="font-size:0.75rem; color:var(--muted);"></div>
+        </div>
+        <div class="btn-row">
+          <button id="autoFindBtn" class="btn-ghost btn-sm" onclick="autoFindMainsCourantes()" disabled>🔍 Chercher "Prud'hommes / Mains courantes"</button>
+          <button id="browseDriveBtn" class="btn-ghost btn-sm" onclick="openFolderModal()" disabled>📂 Parcourir Drive</button>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button id="scanBtn" class="btn-primary btn-grow" onclick="scanRootImages()" disabled>🔄 Scanner les images à la racine</button>
+        <button id="clearCacheBtn" class="btn-ghost btn-sm" onclick="clearProcessedHistory()">🗑️ Oublier l'historique local</button>
+      </div>
+    </section>
+
+    <!-- 3. PROGRESSION STICKY (MOBILE FRIENDLY) -->
+    <section class="card progress-sticky">
+      <div class="progress-meta">
+        <strong id="progressStatus">Prêt</strong>
+        <span id="progressCount" style="color:var(--muted);">0 / 0 (0%)</span>
+      </div>
+
+      <div class="progress-track">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div id="statTotal" class="stat-val">0</div>
+          <div class="stat-lbl">Racine</div>
+        </div>
+        <div class="stat-box">
+          <div id="statOk" class="stat-val" style="color:var(--success);">0</div>
+          <div class="stat-lbl">Classées</div>
+        </div>
+        <div class="stat-box">
+          <div id="statCheck" class="stat-val" style="color:var(--warn);">0</div>
+          <div class="stat-lbl">À vérifier</div>
+        </div>
+        <div class="stat-box">
+          <div id="statRemaining" class="stat-val" style="color:var(--primary);">0</div>
+          <div class="stat-lbl">Restantes</div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button id="startBtn" class="btn-success btn-grow" onclick="startProcessing(false)" disabled>▶️ Traiter les restantes</button>
+        <button id="testOneBtn" class="btn-ghost" onclick="startProcessing(true)" disabled>🧪 Tester 1 photo</button>
+        <button id="pauseBtn" class="btn-warn btn-grow hidden" onclick="togglePause()">⏸️ Pause</button>
+      </div>
+
+      <div id="currentPreview" class="preview-box hidden">
+        <img id="previewImg" class="preview-thumb" alt="Aperçu redressé" />
+        <div style="font-size:0.82rem; display:flex; flex-direction:column; gap:4px;">
+          <strong id="previewTitle">Analyse...</strong>
+          <div id="previewDetails" style="color:var(--muted);"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. JOURNAL DES FICHIERS TRAITES -->
+    <section class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <h2 class="card-title">📜 Journal des traitements</h2>
+        <span id="historyInfo" style="font-size:0.78rem; color:var(--muted);">0 en mémoire</span>
+      </div>
+      <div id="logList" class="log-list">
+        <div class="hint">Aucun fichier traité pour le moment. Connectez-vous et scannez le dossier "Mains courantes".</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- MODAL EXPLORATEUR DRIVE -->
+  <div id="folderModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <strong style="font-size:1rem;">📂 Choisir un dossier Google Drive</strong>
+        <button class="btn-ghost btn-sm" onclick="closeFolderModal()">✕</button>
+      </div>
+      <div id="modalBreadcrumb" style="font-size:0.8rem; color:var(--muted);">Mon Drive</div>
+      <div id="modalFolderList" class="folder-list"></div>
+      <div class="btn-row" style="justify-content:flex-end;">
+        <button class="btn-ghost btn-sm" onclick="modalGoUp()">⬆️ Remonter</button>
+        <button class="btn-primary" onclick="selectCurrentModalFolder()">✅ Sélectionner ce dossier</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =====================================================================
+    // ÉTAT GLOBAL & CONSTANTES
+    // =====================================================================
+    const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
+    const STORAGE_KEYS = {
+      config: "mc_sorter_config_v1",
+      folder: "mc_sorter_folder_v1",
+      processed: "mc_sorter_processed_v1"
+    };
+
+    const state = {
+      tokenClient: null,
+      accessToken: null,
+      tokenExpiresAt: 0,
+      gisReady: false,
+
+      selectedFolder: null, // { id, name, path }
+      subfolderCache: {},   // { [parentId]: { [folderName]: folderId } }
+      folderFilesCache: {}, // { [folderId]: Set(existingFileNames) }
+
+      rootImages: [],       // Images trouvées à la racine
+      processedMap: {},     // { [fileId]: { originalName, targetName, targetFolder, status, rotationDeg, notes, webViewLink, processedAt } }
+
+      isRunning: false,
+      isPaused: false,
+      testSingleMode: false
+    };
+
+    const modalNav = {
+      stack: [{ id: "root", name: "Mon Drive" }],
+      items: []
+    };
+
+    // =====================================================================
+    // INITIALISATION
+    // =====================================================================
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("originDisplay").textContent = window.location.origin;
+      loadConfig();
+      loadSavedFolder();
+      loadProcessedMap();
+      renderStats();
+      renderLogs();
+      waitForGisAndAutoConnect();
+    });
+
+    function toggleConfig() {
+      const body = document.getElementById("configBody");
+      body.classList.toggle("hidden");
+    }
+
+    function copyOrigin() {
+      navigator.clipboard.writeText(window.location.origin);
+      alert("Origine copiée : " + window.location.origin);
+    }
+
+    function loadConfig() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.config);
+        if (!raw) return;
+        const cfg = JSON.parse(raw);
+        if (cfg.clientId) document.getElementById("clientIdInput").value = cfg.clientId;
+        if (cfg.geminiKey) document.getElementById("geminiKeyInput").value = cfg.geminiKey;
+        if (cfg.model) document.getElementById("modelSelect").value = cfg.model;
+        if (cfg.jpegQuality) document.getElementById("jpegQualitySelect").value = cfg.jpegQuality;
+      } catch (e) { console.warn(e); }
+    }
+
+    function saveConfig(silent = false) {
+      const cfg = {
+        clientId: document.getElementById("clientIdInput").value.trim(),
+        geminiKey: document.getElementById("geminiKeyInput").value.trim(),
+        model: document.getElementById("modelSelect").value,
+        jpegQuality: document.getElementById("jpegQualitySelect").value
+      };
+      localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(cfg));
+      if (!silent) alert("Configuration sauvegardée localement.");
+      return cfg;
+    }
+
+    function loadSavedFolder() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.folder);
+        if (raw) {
+          state.selectedFolder = JSON.parse(raw);
+          updateFolderUI();
+        }
+      } catch (e) { console.warn(e); }
+    }
+
+    function loadProcessedMap() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.processed);
+        state.processedMap = raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        state.processedMap = {};
+      }
+    }
+
+    function saveProcessedMap() {
+      localStorage.setItem(STORAGE_KEYS.processed, JSON.stringify(state.processedMap));
+    }
+
+    function clearProcessedHistory() {
+      if (!confirm("Effacer l'historique local des photos déjà traitées ? (Ne supprime aucun fichier sur Google Drive.)")) return;
+      state.processedMap = {};
+      saveProcessedMap();
+      renderStats();
+      renderLogs();
+    }
+
+    // =====================================================================
+    // AUTHENTIFICATION OAUTH GOOGLE (AUTOMATIQUE + RENOUVELLEMENT)
+    // =====================================================================
+    function waitForGisAndAutoConnect() {
+      const check = setInterval(() => {
+        if (window.google && google.accounts && google.accounts.oauth2) {
+          clearInterval(check);
+          state.gisReady = true;
+          const cfg = saveConfig(true);
+          if (cfg.clientId) {
+            initTokenClient(cfg.clientId);
+            // Tentative de connexion OAuth silencieuse automatique
+            requestAccessTokenSilent().catch(() => {
+              setAuthBadge("warn", "🟡 Cliquez sur Connexion Google");
+            });
+          }
+        }
+      }, 250);
+    }
+
+    function initTokenClient(clientId) {
+      state.tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: DRIVE_SCOPE,
+        callback: () => {} // défini dynamiquement dans requestTokenPromise
+      });
+    }
+
+    function requestTokenPromise(promptMode) {
+      return new Promise((resolve, reject) => {
+        if (!state.tokenClient) {
+          reject(new Error("Client OAuth non initialisé."));
+          return;
+        }
+        state.tokenClient.callback = (resp) => {
+          if (resp.error) {
+            reject(new Error(resp.error_description || resp.error));
+            return;
+          }
+          state.accessToken = resp.access_token;
+          const expiresIn = Number(resp.expires_in || 3600);
+          state.tokenExpiresAt = Date.now() + expiresIn * 1000;
+          onAuthenticated();
+          resolve(resp.access_token);
+        };
+        state.tokenClient.requestAccessToken({ prompt: promptMode });
+      });
+    }
+
+    async function requestAccessTokenSilent() {
+      return requestTokenPromise("");
+    }
+
+    async function connectGoogle(interactive = true) {
+      const cfg = saveConfig(true);
+      if (!cfg.clientId) {
+        alert("Veuillez renseigner votre Google OAuth Client ID.");
+        return;
+      }
+      if (!state.gisReady) {
+        alert("La bibliothèque Google OAuth est encore en cours de chargement, réessayez dans 1 seconde.");
+        return;
+      }
+      initTokenClient(cfg.clientId);
+      try {
+        await requestTokenPromise(interactive ? "consent" : "");
+      } catch (err) {
+        if (interactive) {
+          // Si consent échoue ou si l'utilisateur préfère select_account
+          setAuthBadge("err", "🔴 Échec connexion : " + err.message);
+        }
+      }
+    }
+
+    function disconnectGoogle() {
+      if (state.accessToken && window.google?.accounts?.oauth2) {
+        google.accounts.oauth2.revoke(state.accessToken, () => {});
+      }
+      state.accessToken = null;
+      state.tokenExpiresAt = 0;
+      setAuthBadge("", "⚪ Non connecté");
+      document.getElementById("disconnectBtn").classList.add("hidden");
+      document.getElementById("autoFindBtn").disabled = true;
+      document.getElementById("browseDriveBtn").disabled = true;
+      document.getElementById("scanBtn").disabled = true;
+    }
+
+    async function ensureValidToken() {
+      // Renouvelle automatiquement s'il reste moins de 2 minutes
+      if (!state.accessToken || Date.now() > state.tokenExpiresAt - 120_000) {
+        try {
+          await requestAccessTokenSilent();
+        } catch {
+          throw new Error("Session Google expirée. Cliquez sur 'Connexion Google Drive' puis reprenez le traitement.");
+        }
+      }
+      return state.accessToken;
+    }
+
+    async function onAuthenticated() {
+      setAuthBadge("ok", "🟢 Connecté à Google Drive");
+      document.getElementById("disconnectBtn").classList.remove("hidden");
+      document.getElementById("autoFindBtn").disabled = false;
+      document.getElementById("browseDriveBtn").disabled = false;
+      document.getElementById("scanBtn").disabled = !state.selectedFolder;
+
+      // Recherche automatique du dossier "Prud'hommes > Mains courantes" si non encore sélectionné
+      if (!state.selectedFolder) {
+        await autoFindMainsCourantes();
+      } else {
+        setFolderBadge("ok", "✅ Dossier prêt");
+      }
+    }
+
+    function setAuthBadge(type, text) {
+      const el = document.getElementById("authBadge");
+      el.className = "badge" + (type ? " " + type : "");
+      el.textContent = text;
+    }
+
+    function setFolderBadge(type, text) {
+      const el = document.getElementById("folderStatusBadge");
+      el.className = "badge" + (type ? " " + type : "");
+      el.textContent = text;
+    }
+
+    // =====================================================================
+    // GOOGLE DRIVE API v3 (REST)
+    // =====================================================================
+    async function driveFetch(url, options = {}) {
+      const token = await ensureValidToken();
+      const headers = new Headers(options.headers || {});
+      headers.set("Authorization", "Bearer " + token);
+
+      const res = await fetch(url, { ...options, headers });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Drive API (${res.status}): ${text.slice(0, 220)}`);
+      }
+      return res;
+    }
+
+    function escapeDriveQuery(str) {
+      return str.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    }
+
+    async function driveListAll(query, fields = "files(id,name,mimeType,parents,size,modifiedTime,webViewLink)") {
+      const items = [];
+      let pageToken = null;
+      do {
+        const params = new URLSearchParams({
+          q: query,
+          fields: `nextPageToken,${fields}`,
+          pageSize: "1000",
+          supportsAllDrives: "true",
+          includeItemsFromAllDrives: "true"
+        });
+        if (pageToken) params.set("pageToken", pageToken);
+        const res = await driveFetch("https://www.googleapis.com/drive/v3/files?" + params.toString());
+        const data = await res.json();
+        if (data.files) items.push(...data.files);
+        pageToken = data.nextPageToken || null;
+      } while (pageToken);
+      return items;
+    }
+
+    async function autoFindMainsCourantes() {
+      setFolderBadge("warn", "🔍 Recherche en cours...");
+      try {
+        // 1. Chercher le dossier "Prud'hommes"
+        const prudFolders = await driveListAll(
+          `name = '${escapeDriveQuery("Prud'hommes")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+        );
+
+        let target = null;
+        let pathLabel = "";
+
+        if (prudFolders.length > 0) {
+          for (const pf of prudFolders) {
+            const mcFolders = await driveListAll(
+              `'${pf.id}' in parents and name = '${escapeDriveQuery("Mains courantes")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+            );
+            if (mcFolders.length > 0) {
+              target = mcFolders[0];
+              pathLabel = "Prud'hommes / Mains courantes";
+              break;
+            }
+          }
+        }
+
+        // Secours : chercher "Mains courantes" partout s'il n'est pas directement sous Prud'hommes
+        if (!target) {
+          const fallback = await driveListAll(
+            `name = '${escapeDriveQuery("Mains courantes")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+          );
+          if (fallback.length === 1) {
+            target = fallback[0];
+            pathLabel = "Mains courantes";
+          }
+        }
+
+        if (target) {
+          setSelectedFolder(target.id, target.name, pathLabel);
+          setFolderBadge("ok", "✅ Dossier trouvé automatiquement");
+        } else {
+          setFolderBadge("warn", "⚠️ Dossier non trouvé — utilisez Parcourir Drive");
+        }
+      } catch (err) {
+        setFolderBadge("err", "❌ Erreur recherche : " + err.message);
+      }
+    }
+
+    function setSelectedFolder(id, name, path) {
+      state.selectedFolder = { id, name, path };
+      localStorage.setItem(STORAGE_KEYS.folder, JSON.stringify(state.selectedFolder));
+      updateFolderUI();
+      if (state.accessToken) {
+        document.getElementById("scanBtn").disabled = false;
+      }
+    }
+
+    function updateFolderUI() {
+      const f = state.selectedFolder;
+      document.getElementById("selectedFolderName").textContent = f ? f.name : "Aucun";
+      document.getElementById("selectedFolderPath").textContent = f ? `${f.path} (ID: ${f.id})` : "";
+    }
+
+    // Explorateur Drive manuel
+    async function openFolderModal() {
+      modalNav.stack = [{ id: "root", name: "Mon Drive" }];
+      document.getElementById("folderModal").classList.remove("hidden");
+      await loadModalFolder("root");
+    }
+
+    function closeFolderModal() {
+      document.getElementById("folderModal").classList.add("hidden");
+    }
+
+    async function loadModalFolder(parentId) {
+      const listEl = document.getElementById("modalFolderList");
+      listEl.innerHTML = `<div class="hint">Chargement des dossiers...</div>`;
+      document.getElementById("modalBreadcrumb").textContent = modalNav.stack.map(s => s.name).join(" / ");
+
+      const folders = await driveListAll(
+        `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        "files(id,name)"
+      );
+      folders.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+
+      if (folders.length === 0) {
+        listEl.innerHTML = `<div class="hint">Aucun sous-dossier ici. Vous pouvez sélectionner ce dossier.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = "";
+      for (const f of folders) {
+        const row = document.createElement("div");
+        row.className = "folder-row";
+        row.innerHTML = `<span>📁 ${escapeHtml(f.name)}</span><span style="color:var(--muted); font-size:0.8rem;">Ouvrir ›</span>`;
+        row.onclick = () => {
+          modalNav.stack.push({ id: f.id, name: f.name });
+          loadModalFolder(f.id);
+        };
+        listEl.appendChild(row);
+      }
+    }
+
+    function modalGoUp() {
+      if (modalNav.stack.length <= 1) return;
+      modalNav.stack.pop();
+      loadModalFolder(modalNav.stack[modalNav.stack.length - 1].id);
+    }
+
+    function selectCurrentModalFolder() {
+      const current = modalNav.stack[modalNav.stack.length - 1];
+      const path = modalNav.stack.map(s => s.name).join(" / ");
+      setSelectedFolder(current.id, current.name, path);
+      setFolderBadge("ok", "✅ Dossier sélectionné");
+      closeFolderModal();
+    }
+
+    // =====================================================================
+    // SCAN DES IMAGES À LA RACINE
+    // =====================================================================
+    async function scanRootImages() {
+      if (!state.selectedFolder) return;
+      const scanBtn = document.getElementById("scanBtn");
+      scanBtn.disabled = true;
+      setProgressStatus("Scan du dossier racine...");
+
+      try {
+        const folderId = state.selectedFolder.id;
+        const allFiles = await driveListAll(
+          `'${folderId}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`
+        );
+
+        // Filtre strict sur .jpg, .jpeg, .png à la racine
+        state.rootImages = allFiles
+          .filter(f => /\.(jpe?g|png)$/i.test(f.name || ""))
+          .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+
+        // Précharger les sous-dossiers existants pour accélérer la suite
+        await refreshSubfolderCache(folderId);
+
+        renderStats();
+        const remaining = getRemainingImages().length;
+        document.getElementById("startBtn").disabled = remaining === 0;
+        document.getElementById("testOneBtn").disabled = remaining === 0;
+        setProgressStatus(
+          remaining > 0
+            ? `Prêt : ${remaining} photo(s) à traiter`
+            : "Toutes les photos de la racine ont déjà été traitées !"
+        );
+      } catch (err) {
+        alert("Erreur lors du scan : " + err.message);
+        setProgressStatus("Erreur de scan");
+      } finally {
+        scanBtn.disabled = false;
+      }
+    }
+
+    function getRemainingImages() {
+      return state.rootImages.filter(f => !state.processedMap[f.id]);
+    }
+
+    async function refreshSubfolderCache(parentId) {
+      const subfolders = await driveListAll(
+        `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        "files(id,name)"
+      );
+      state.subfolderCache[parentId] = {};
+      for (const sf of subfolders) {
+        state.subfolderCache[parentId][sf.name] = sf.id;
+      }
+    }
+
+    async function ensureSubfolder(parentId, folderName) {
+      if (!state.subfolderCache[parentId]) {
+        await refreshSubfolderCache(parentId);
+      }
+      if (state.subfolderCache[parentId][folderName]) {
+        return state.subfolderCache[parentId][folderName];
+      }
+
+      const res = await driveFetch("https://www.googleapis.com/drive/v3/files?fields=id,name", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: folderName,
+          mimeType: "application/vnd.google-apps.folder",
+          parents: [parentId]
+        })
+      });
+      const created = await res.json();
+      state.subfolderCache[parentId][folderName] = created.id;
+      state.folderFilesCache[created.id] = new Set();
+      return created.id;
+    }
+
+    async function resolveUniqueFilename(targetFolderId, desiredName) {
+      if (!state.folderFilesCache[targetFolderId]) {
+        const existing = await driveListAll(
+          `'${targetFolderId}' in parents and trashed = false`,
+          "files(name)"
+        );
+        state.folderFilesCache[targetFolderId] = new Set(existing.map(x => x.name));
+      }
+      const existingSet = state.folderFilesCache[targetFolderId];
+      if (!existingSet.has(desiredName)) {
+        existingSet.add(desiredName);
+        return desiredName;
+      }
+      const dotIdx = desiredName.lastIndexOf(".");
+      const base = dotIdx > 0 ? desiredName.slice(0, dotIdx) : desiredName;
+      const ext = dotIdx > 0 ? desiredName.slice(dotIdx) : "";
+      let counter = 2;
+      while (existingSet.has(`${base} (${counter})${ext}`)) {
+        counter++;
+      }
+      const unique = `${base} (${counter})${ext}`;
+      existingSet.add(unique);
+      return unique;
+    }
+
+    async function uploadBlobToDrive(blob, fileName, mimeType, parentFolderId) {
+      const boundary = "mc_boundary_" + Math.random().toString(36).slice(2);
+      const metadata = JSON.stringify({
+        name: fileName,
+        parents: [parentFolderId],
+        mimeType
+      });
+
+      const headerPart =
+        `--${boundary}\r\n` +
+        `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+        `${metadata}\r\n` +
+        `--${boundary}\r\n` +
+        `Content-Type: ${mimeType}\r\n\r\n`;
+      const footerPart = `\r\n--${boundary}--`;
+
+      const multipartBody = new Blob([headerPart, blob, footerPart], {
+        type: `multipart/related; boundary=${boundary}`
+      });
+
+      const res = await driveFetch(
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink",
+        {
+          method: "POST",
+          body: multipartBody
+        }
+      );
+      return res.json();
+    }
+
+    // =====================================================================
+    // TRAITEMENT IMAGE (EXIF + CANVAS ROTATION)
+    // =====================================================================
+    async function blobToAnalysisBase64(blob) {
+      // createImageBitmap applique automatiquement l'orientation EXIF :
+      // ainsi Gemini voit EXACTEMENT l'image telle que Canvas la dessinera à 0°.
+      const bitmap = await createImageBitmap(blob);
+      try {
+        const maxSide = 1600;
+        const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+        const w = Math.max(1, Math.round(bitmap.width * scale));
+        const h = Math.max(1, Math.round(bitmap.height * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(bitmap, 0, 0, w, h);
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        canvas.width = 0;
+        canvas.height = 0;
+        return dataUrl.split(",")[1];
+      } finally {
+        bitmap.close();
+      }
+    }
+
+    async function rotateImageBlob(blob, clockwiseDeg, outputMime = "image/jpeg", quality = 0.92) {
+      const bitmap = await createImageBitmap(blob);
+      try {
+        let w = bitmap.width;
+        let h = bitmap.height;
+
+        // Sécurité mémoire mobile (limite Safari iOS ~16.7 Mpx)
+        const MAX_PIXELS = 15_500_000;
+        if (w * h > MAX_PIXELS) {
+          const factor = Math.sqrt(MAX_PIXELS / (w * h));
+          w = Math.floor(w * factor);
+          h = Math.floor(h * factor);
+        }
+
+        const norm = ((Number(clockwiseDeg) || 0) % 360 + 360) % 360;
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        const isNear = (a, b) => Math.abs(a - b) < 0.75;
+
+        if (isNear(norm, 0) || isNear(norm, 360)) {
+          canvas.width = w;
+          canvas.height = h;
+          ctx.drawImage(bitmap, 0, 0, w, h);
+        } else if (isNear(norm, 90)) {
+          canvas.width = h;
+          canvas.height = w;
+          ctx.translate(h, 0);
+          ctx.rotate(Math.PI / 2);
+          ctx.drawImage(bitmap, 0, 0, w, h);
+        } else if (isNear(norm, 180)) {
+          canvas.width = w;
+          canvas.height = h;
+          ctx.translate(w, h);
+          ctx.rotate(Math.PI);
+          ctx.drawImage(bitmap, 0, 0, w, h);
+        } else if (isNear(norm, 270)) {
+          canvas.width = h;
+          canvas.height = w;
+          ctx.translate(0, w);
+          ctx.rotate(-Math.PI / 2);
+          ctx.drawImage(bitmap, 0, 0, w, h);
+        } else {
+          // Angle fin (image penchée) : calcul de la boîte englobante complète
+          const rad = (norm * Math.PI) / 180;
+          const cos = Math.abs(Math.cos(rad));
+          const sin = Math.abs(Math.sin(rad));
+          let outW = Math.ceil(w * cos + h * sin);
+          let outH = Math.ceil(w * sin + h * cos);
+
+          if (outW * outH > MAX_PIXELS) {
+            const f = Math.sqrt(MAX_PIXELS / (outW * outH));
+            outW = Math.floor(outW * f);
+            outH = Math.floor(outH * f);
+            w = Math.floor(w * f);
+            h = Math.floor(h * f);
+          }
+
+          canvas.width = outW;
+          canvas.height = outH;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, outW, outH);
+          ctx.translate(outW / 2, outH / 2);
+          ctx.rotate(rad);
+          ctx.drawImage(bitmap, -w / 2, -h / 2, w, h);
+        }
+
+        const outBlob = await new Promise((resolve, reject) => {
+          canvas.toBlob(
+            b => (b ? resolve(b) : reject(new Error("Échec encodage Canvas"))),
+            outputMime,
+            outputMime === "image/jpeg" ? quality : undefined
+          );
+        });
+
+        canvas.width = 0;
+        canvas.height = 0;
+        return outBlob;
+      } finally {
+        bitmap.close();
+      }
+    }
+
+    // =====================================================================
+    // ANALYSE GEMINI API (STRUCTURED OUTPUT)
+    // =====================================================================
+    const GEMINI_SCHEMA = {
+      type: "OBJECT",
+      properties: {
+        is_logbook: { type: "BOOLEAN" },
+        is_readable: { type: "BOOLEAN" },
+        doubt_reason: { type: "STRING" },
+        rotation_clockwise_deg: { type: "NUMBER" },
+        guillaume_shift_found: { type: "BOOLEAN" },
+        start_day: { type: "INTEGER" },
+        start_month: { type: "INTEGER" },
+        start_year: { type: "INTEGER" },
+        shift_type: {
+          type: "STRING",
+          enum: ["Jour", "Nuit", "Jour et Nuit", "Inconnu"]
+        },
+        relief_agent_surname: { type: "STRING" },
+        confidence_notes: { type: "STRING" }
+      },
+      required: [
+        "is_logbook",
+        "is_readable",
+        "doubt_reason",
+        "rotation_clockwise_deg",
+        "guillaume_shift_found",
+        "start_day",
+        "start_month",
+        "start_year",
+        "shift_type",
+        "relief_agent_surname",
+        "confidence_notes"
+      ]
+    };
+
+    const GEMINI_PROMPT = `Tu es un assistant expert chargé d'analyser une photo d'un cahier manuscrit de "main courante" d'agent de sécurité en France.
+
+TÂCHE 1 — ORIENTATION EXACTE (rotation_clockwise_deg) :
+Détermine de combien de degrés tourner cette image DANS LE SENS HORAIRE (aiguilles d'une montre) pour que le texte manuscrit soit parfaitement horizontal, lisible de gauche à droite et tête en haut :
+- 0 : déjà parfaitement à l'endroit.
+- 90 : le haut de la page est à gauche (texte écrit verticalement de bas en haut).
+- 180 : page à l'envers (tête en bas).
+- 270 : le haut de la page est à droite (texte écrit verticalement de haut en bas).
+- Si la page est penchée/inclinée de façon visible (plus de 2°), donne l'angle horaire exact (ex: 94, 176, 355). Sinon donne exactement 0, 90, 180 ou 270.
+
+TÂCHE 2 — VALIDITÉ DU DOCUMENT :
+- is_logbook : true si c'est bien une photo de cahier/feuille de main courante de sécurité, false sinon (ex: photo personnelle, badge, planning, écran, etc.).
+- is_readable : true UNIQUEMENT si les informations nécessaires (date complète avec année, vacation de Guillaume BEDOUET si double page, agent de relève, Jour/Nuit) sont lisibles et non coupées. Si flou, illisible, date/année coupée ou absente, ou vacation de Guillaume BEDOUET introuvable, mets is_readable = false et indique une raison courte en français dans doubt_reason (ex: "Image floue", "Date coupée", "Année manquante", "Pas une main courante", "Agent relève illisible", "Guillaume BEDOUET absent").
+
+TÂCHE 3 — LECTURE DE LA VACATION DE GUILLAUME BEDOUET :
+- Si une double page montre deux vacations différentes, cible EXCLUSIVEMENT celle de "Guillaume BEDOUET" (ou "G. BEDOUET", "Bedouet"). Mets guillaume_shift_found = true si trouvé.
+- Date de DÉBUT de vacation : en France, les dates manuscrites sont écrites JJ/MM/AAAA (jour puis mois). Extrais séparément :
+  * start_day (1..31, ou 0 si illisible/coupé)
+  * start_month (1..12, ou 0 si illisible/coupé)
+  * start_year (année complète à 4 chiffres ex: 2025, ou 0 si absente/coupée)
+- shift_type : indique si la vacation a été effectuée de "Jour", de "Nuit", "Jour et Nuit", ou "Inconnu" si impossible à déterminer (regarde les horaires de prise/fin de service ou mentions Jour/Nuit).
+- relief_agent_surname : extrais UNIQUEMENT le nom de famille de l'agent qui fait la relève (celui relevé par Guillaume BEDOUET en début de vacation OU celui qui le relève en fin de vacation). Chaîne vide si absent ou illisible.`;
+
+    async function analyzeWithGemini(base64Jpeg, geminiKey, model) {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+
+      const payload = {
+        contents: [
+          {
+            parts: [
+              { text: GEMINI_PROMPT },
+              {
+                inlineData: {
+                  mimeType: "image/jpeg",
+                  data: base64Jpeg
+                }
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: GEMINI_SCHEMA
+        }
+      };
+
+      // Retry automatique en cas de quota temporaire (429 / 503)
+      const delays = [2000, 5000, 10000];
+      for (let attempt = 0; attempt <= delays.length; attempt++) {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": geminiKey
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!text) throw new Error("Réponse Gemini vide.");
+          return JSON.parse(text);
+        }
+
+        const errText = await res.text();
+        if ((res.status === 429 || res.status === 503) && attempt < delays.length) {
+          setProgressStatus(`Limite API Gemini (${res.status}), nouvelle tentative dans ${delays[attempt] / 1000}s...`);
+          await sleep(delays[attempt]);
+          continue;
+        }
+        throw new Error(`Gemini API (${res.status}): ${errText.slice(0, 220)}`);
+      }
+    }
+
+    // =====================================================================
+    // RÈGLES MÉTIER : VALIDATION & NOMMAGE
+    // =====================================================================
+    function sanitizeFilenamePart(str) {
+      return (str || "")
+        .replace(/[\/\\:*?"<>|]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function formatSurname(raw) {
+      const cleaned = sanitizeFilenamePart(raw);
+      if (!cleaned) return "";
+      return cleaned
+        .toLowerCase()
+        .replace(/(^|[\s-])([a-zàâäéèêëîïôöùûüç])/g, (m, sep, ch) => sep + ch.toUpperCase());
+    }
+
+    function isValidCalendarDate(y, m, d) {
+      if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return false;
+      if (y < 2020 || y > 2030 || m < 1 || m > 12 || d < 1 || d > 31) return false;
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+    }
+
+    function buildClassification(analysis, originalFilename) {
+      const validShifts = ["Jour", "Nuit", "Jour et Nuit"];
+      const surname = formatSurname(analysis.relief_agent_surname);
+      const dateOk = isValidCalendarDate(analysis.start_year, analysis.start_month, analysis.start_day);
+      const shiftOk = validShifts.includes(analysis.shift_type);
+
+      const allReadable =
+        analysis.is_logbook === true &&
+        analysis.is_readable === true &&
+        analysis.guillaume_shift_found === true &&
+        dateOk &&
+        shiftOk &&
+        surname.length > 0;
+
+      if (allReadable) {
+        const mm = String(analysis.start_month).padStart(2, "0");
+        const jj = String(analysis.start_day).padStart(2, "0");
+        const aaaa = String(analysis.start_year);
+        return {
+          status: "ok",
+          targetFolderName: aaaa,
+          desiredFilename: `${mm}-${jj}-${aaaa} - Relève ${surname} - ${analysis.shift_type}.jpg`,
+          outputMime: "image/jpeg",
+          reason: ""
+        };
+      }
+
+      // Détermination de la raison du doute pour le préfixe dans "À vérifier"
+      let reason = sanitizeFilenamePart(analysis.doubt_reason);
+      if (!reason) {
+        if (!analysis.is_logbook) reason = "Pas une main courante";
+        else if (!analysis.guillaume_shift_found) reason = "Guillaume BEDOUET non trouvé";
+        else if (!dateOk) reason = "Date ou année illisible";
+        else if (!surname) reason = "Relève illisible";
+        else if (!shiftOk) reason = "Jour ou Nuit incertain";
+        else reason = "À vérifier";
+      }
+
+      const isPng = /\.png$/i.test(originalFilename);
+      return {
+        status: "check",
+        targetFolderName: "À vérifier",
+        desiredFilename: `${reason} - ${sanitizeFilenamePart(originalFilename)}`,
+        outputMime: isPng ? "image/png" : "image/jpeg",
+        reason
+      };
+    }
+
+    // =====================================================================
+    // BOUCLE DE TRAITEMENT SÉQUENTIELLE (NON BLOQUANTE + PAUSE/REPRISE)
+    // =====================================================================
+    async function startProcessing(singleTest = false) {
+      const cfg = saveConfig(true);
+      if (!cfg.geminiKey) {
+        alert("Veuillez renseigner votre clé API Gemini dans la configuration.");
+        return;
+      }
+      if (!state.selectedFolder) {
+        alert("Veuillez sélectionner le dossier Google Drive source.");
+        return;
+      }
+
+      const queue = getRemainingImages();
+      if (queue.length === 0) {
+        alert("Aucune image restante à traiter.");
+        return;
+      }
+
+      state.isRunning = true;
+      state.isPaused = false;
+      state.testSingleMode = singleTest;
+      updateControlButtons();
+
+      const totalBatch = singleTest ? 1 : queue.length;
+      const rootFolderId = state.selectedFolder.id;
+      const jpegQuality = Number(cfg.jpegQuality || 0.92);
+
+      try {
+        for (let i = 0; i < totalBatch; i++) {
+          if (state.isPaused) {
+            setProgressStatus("⏸️ En pause — progression sauvegardée.");
+            break;
+          }
+
+          const file = queue[i];
+          const label = `[${i + 1}/${totalBatch}] ${file.name}`;
+
+          // 1. Téléchargement
+          setProgressStatus(`⬇️ Téléchargement ${label}`);
+          await yieldToMain();
+          const dlRes = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
+          const originalBlob = await dlRes.blob();
+
+          if (state.isPaused) { setProgressStatus("⏸️ En pause."); break; }
+
+          // 2. Préparation image & Analyse Gemini
+          setProgressStatus(`🤖 Analyse Gemini ${label}`);
+          await yieldToMain();
+          const base64Preview = await blobToAnalysisBase64(originalBlob);
+          const analysis = await analyzeWithGemini(base64Preview, cfg.geminiKey, cfg.model);
+
+          // 3. Rotation réelle sur Canvas
+          setProgressStatus(`🔄 Redressement (${analysis.rotation_clockwise_deg}°) ${label}`);
+          await yieldToMain();
+          const decision = buildClassification(analysis, file.name);
+          const rotatedBlob = await rotateImageBlob(
+            originalBlob,
+            analysis.rotation_clockwise_deg,
+            decision.outputMime,
+            jpegQuality
+          );
+
+          // Aperçu instantané à l'écran
+          showPreview(rotatedBlob, file.name, decision, analysis);
+
+          // 4. Création du sous-dossier cible & Upload de la copie redressée
+          setProgressStatus(`☁️ Envoi vers "${decision.targetFolderName}"...`);
+          await yieldToMain();
+          const targetFolderId = await ensureSubfolder(rootFolderId, decision.targetFolderName);
+          const finalName = await resolveUniqueFilename(targetFolderId, decision.desiredFilename);
+          const uploaded = await uploadBlobToDrive(rotatedBlob, finalName, decision.outputMime, targetFolderId);
+
+          // 5. Enregistrement persistant immédiat (reprise possible à tout moment)
+          state.processedMap[file.id] = {
+            fileId: file.id,
+            originalName: file.name,
+            targetName: uploaded.name || finalName,
+            targetFolder: decision.targetFolderName,
+            status: decision.status,
+            reason: decision.reason,
+            rotationDeg: analysis.rotation_clockwise_deg,
+            notes: analysis.confidence_notes || "",
+            webViewLink: uploaded.webViewLink || "",
+            processedAt: new Date().toISOString()
+          };
+          saveProcessedMap();
+          renderStats();
+          renderLogs();
+
+          // Petite respiration UI entre deux photos
+          await sleep(150);
+        }
+
+        if (!state.isPaused) {
+          setProgressStatus(
+            singleTest
+              ? "✅ Test sur 1 photo terminé ! Vérifiez le résultat ci-dessous."
+              : "✅ Traitement terminé !"
+          );
+        }
+      } catch (err) {
+        console.error(err);
+        setProgressStatus("❌ Interrompu : " + err.message);
+        alert("Traitement interrompu (votre progression précédente est sauvegardée) :\n\n" + err.message);
+      } finally {
+        state.isRunning = false;
+        state.isPaused = false;
+        updateControlButtons();
+        renderStats();
+      }
+    }
+
+    function togglePause() {
+      if (!state.isRunning) return;
+      state.isPaused = true;
+      document.getElementById("pauseBtn").disabled = true;
+      document.getElementById("pauseBtn").textContent = "⏳ Arrêt après cette photo...";
+    }
+
+    function updateControlButtons() {
+      const remaining = getRemainingImages().length;
+      const startBtn = document.getElementById("startBtn");
+      const testBtn = document.getElementById("testOneBtn");
+      const pauseBtn = document.getElementById("pauseBtn");
+      const scanBtn = document.getElementById("scanBtn");
+
+      if (state.isRunning) {
+        startBtn.classList.add("hidden");
+        testBtn.classList.add("hidden");
+        pauseBtn.classList.remove("hidden");
+        pauseBtn.disabled = false;
+        pauseBtn.textContent = "⏸️ Pause";
+        scanBtn.disabled = true;
+      } else {
+        pauseBtn.classList.add("hidden");
+        startBtn.classList.remove("hidden");
+        testBtn.classList.remove("hidden");
+        startBtn.disabled = remaining === 0;
+        testBtn.disabled = remaining === 0;
+        scanBtn.disabled = !state.accessToken || !state.selectedFolder;
+      }
+    }
+
+    // =====================================================================
+    // INTERFACE UTILISATEUR (PROGRESSION, APERÇU, JOURNAL)
+    // =====================================================================
+    function setProgressStatus(msg) {
+      document.getElementById("progressStatus").textContent = msg;
+    }
+
+    let lastPreviewUrl = null;
+    function showPreview(blob, originalName, decision, analysis) {
+      if (lastPreviewUrl) URL.revokeObjectURL(lastPreviewUrl);
+      lastPreviewUrl = URL.createObjectURL(blob);
+
+      document.getElementById("currentPreview").classList.remove("hidden");
+      document.getElementById("previewImg").src = lastPreviewUrl;
+      document.getElementById("previewTitle").textContent =
+        `${decision.targetFolderName} / ${decision.desiredFilename}`;
+      document.getElementById("previewDetails").textContent =
+        `Original : ${originalName} • Rotation : ${analysis.rotation_clockwise_deg}° • ${analysis.confidence_notes || ""}`;
+    }
+
+    function renderStats() {
+      const total = state.rootImages.length;
+      const rootIds = new Set(state.rootImages.map(f => f.id));
+
+      let okCount = 0;
+      let checkCount = 0;
+      let doneInRoot = 0;
+
+      for (const entry of Object.values(state.processedMap)) {
+        if (entry.status === "ok") okCount++;
+        else checkCount++;
+        if (rootIds.has(entry.fileId)) doneInRoot++;
+      }
+
+      const remaining = Math.max(0, total - doneInRoot);
+      const pct = total > 0 ? Math.round((doneInRoot / total) * 100) : 0;
+
+      document.getElementById("statTotal").textContent = total;
+      document.getElementById("statOk").textContent = okCount;
+      document.getElementById("statCheck").textContent = checkCount;
+      document.getElementById("statRemaining").textContent = remaining;
+
+      document.getElementById("progressCount").textContent = `${doneInRoot} / ${total} (${pct}%)`;
+      document.getElementById("progressFill").style.width = `${pct}%`;
+      document.getElementById("historyInfo").textContent = `${Object.keys(state.processedMap).length} en mémoire`;
+    }
+
+    function renderLogs() {
+      const list = document.getElementById("logList");
+      const entries = Object.values(state.processedMap).sort(
+        (a, b) => new Date(b.processedAt) - new Date(a.processedAt)
+      );
+
+      if (entries.length === 0) {
+        list.innerHTML = `<div class="hint">Aucun fichier traité pour le moment.</div>`;
+        return;
+      }
+
+      list.innerHTML = entries.map(e => {
+        const cls = e.status === "ok" ? "ok" : "check";
+        const icon = e.status === "ok" ? "✅" : "⚠️";
+        const linkHtml = e.webViewLink
+          ? `<a href="${escapeHtml(e.webViewLink)}" target="_blank" rel="noopener">Ouvrir dans Drive ↗</a>`
+          : "";
+        return `
+          <div class="log-item ${cls}">
+            <div class="log-top">
+              <span>${icon} ${escapeHtml(e.targetFolder)} / ${escapeHtml(e.targetName)}</span>
+              ${linkHtml}
+            </div>
+            <div class="log-sub">
+              Original : ${escapeHtml(e.originalName)} • Rotation : ${e.rotationDeg}°
+              ${e.notes ? " • " + escapeHtml(e.notes) : ""}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const yieldToMain = () => new Promise(r => setTimeout(r, 0));
+  </script>
+</body>
+</html>
