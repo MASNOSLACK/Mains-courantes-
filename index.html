@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Tri Mains Courantes (Rapide x5)</title>
+  <title>Tri Mains Courantes — Prud'hommes (JPG & PDF)</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     :root {
       --bg: #0f172a;
@@ -14,7 +15,6 @@
       --text: #f8fafc;
       --muted: #94a3b8;
       --primary: #3b82f6;
-      --primary-hover: #2563eb;
       --success: #10b981;
       --warn: #f59e0b;
       --danger: #ef4444;
@@ -269,7 +269,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>⚡ Tri Mains Courantes (x5)</h1>
+      <h1>⚡ Tri Prud'hommes (JPG & PDF • x5)</h1>
       <span id="authBadge" class="badge">⚪ Non connecté</span>
     </header>
 
@@ -293,7 +293,7 @@
         </div>
 
         <div class="hint">
-          Mode rapide : <strong>gemini-2.5-flash</strong> (thinkingBudget: 0) • Miniature <strong>1000px (0.6)</strong> • Export <strong>2000px (0.85)</strong> • Lots de <strong>5 en parallèle</strong>.
+          Scan récursif de <strong>tous les sous-dossiers</strong> (.jpg, .jpeg, .png, .pdf) • <strong>gemini-2.5-flash</strong> (thinkingBudget: 0) • Export <strong>MM-JJ-AAAA - [Nom].jpg</strong>.
         </div>
 
         <div class="btn-row">
@@ -307,7 +307,7 @@
     <!-- 2. DOSSIER -->
     <section class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-        <h2 class="card-title">📁 Dossier Google Drive</h2>
+        <h2 class="card-title">📁 Dossier source Google Drive</h2>
         <span id="folderStatusBadge" class="badge">En attente</span>
       </div>
 
@@ -317,13 +317,13 @@
           <div id="selectedFolderPath" style="font-size:0.74rem;"></div>
         </div>
         <div class="btn-row">
-          <button id="autoFindBtn" class="btn-ghost btn-sm" onclick="autoFindMainsCourantes()" disabled>🔍 Chercher "Mains courantes"</button>
+          <button id="autoFindBtn" class="btn-ghost btn-sm" onclick="autoFindPrudhommes()" disabled>🔍 Chercher "Prud'hommes"</button>
           <button id="browseDriveBtn" class="btn-ghost btn-sm" onclick="openFolderModal()" disabled>📂 Parcourir</button>
         </div>
       </div>
 
       <div class="btn-row">
-        <button id="scanBtn" class="btn-primary btn-grow" onclick="scanRootImages()" disabled>🔄 Scanner les images à la racine</button>
+        <button id="scanBtn" class="btn-primary btn-grow" onclick="scanAllSubfolders()" disabled>🔄 Scanner tous les dossiers (JPG & PDF)</button>
         <button class="btn-ghost btn-sm" onclick="clearProcessedHistory()">🗑️ Effacer l'historique local</button>
       </div>
     </section>
@@ -340,15 +340,15 @@
       </div>
 
       <div class="stats-grid">
-        <div class="stat-box"><div id="statTotal" class="stat-val">0</div><div class="stat-lbl">Racine</div></div>
-        <div class="stat-box"><div id="statOk" class="stat-val" style="color:var(--success);">0</div><div class="stat-lbl">Classées</div></div>
+        <div class="stat-box"><div id="statTotal" class="stat-val">0</div><div class="stat-lbl">Trouvés</div></div>
+        <div class="stat-box"><div id="statOk" class="stat-val" style="color:var(--success);">0</div><div class="stat-lbl">Classés</div></div>
         <div class="stat-box"><div id="statCheck" class="stat-val" style="color:var(--warn);">0</div><div class="stat-lbl">À vérifier</div></div>
-        <div class="stat-box"><div id="statRemaining" class="stat-val" style="color:var(--primary);">0</div><div class="stat-lbl">Restantes</div></div>
+        <div class="stat-box"><div id="statRemaining" class="stat-val" style="color:var(--primary);">0</div><div class="stat-lbl">Restants</div></div>
       </div>
 
       <div class="btn-row">
         <button id="startBtn" class="btn-success btn-grow" onclick="startProcessing(false)" disabled>⚡ Traiter par lots de 5</button>
-        <button id="testOneBtn" class="btn-ghost" onclick="startProcessing(true)" disabled>🧪 Tester 1 photo</button>
+        <button id="testOneBtn" class="btn-ghost" onclick="startProcessing(true)" disabled>🧪 Tester 1 fichier</button>
         <button id="pauseBtn" class="btn-warn btn-grow hidden" onclick="togglePause()">⏸️ Pause</button>
       </div>
     </section>
@@ -382,6 +382,12 @@
   </div>
 
   <script>
+    // Configuration du worker PDF.js
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+
     // =====================================================================
     // CONSTANTES & ÉTAT
     // =====================================================================
@@ -395,8 +401,9 @@
 
     const STORAGE_KEYS = {
       config: "mc_sorter_config_v1",
-      folder: "mc_sorter_folder_v1",
-      processed: "mc_sorter_processed_v1"
+      folder: "mc_sorter_folder_v2", // v2 pour basculer automatiquement sur Prud'hommes
+      processed: "mc_sorter_processed_v1",
+      uploaded: "mc_sorter_uploaded_v1"
     };
 
     const state = {
@@ -411,8 +418,9 @@
       folderFilesCache: {},
       folderFilesInFlight: {},
 
-      rootImages: [],
-      processedMap: {},
+      sourceFiles: [],      // Tous les JPG/PNG/PDF trouvés récursivement
+      processedMap: {},     // { [sourceFileId]: { ... } }
+      uploadedIds: {},      // { [createdFileId]: true } pour ne jamais rescanner nos sorties
 
       isRunning: false,
       isPaused: false
@@ -427,6 +435,7 @@
       loadConfig();
       loadSavedFolder();
       loadProcessedMap();
+      loadUploadedIds();
       renderStats();
       renderLogs();
       waitForGisAndAutoConnect();
@@ -466,17 +475,26 @@
       try {
         const raw = localStorage.getItem(STORAGE_KEYS.processed);
         state.processedMap = raw ? JSON.parse(raw) : {};
-      } catch (e) {
-        state.processedMap = {};
-      }
+      } catch (e) { state.processedMap = {}; }
     }
 
     function saveProcessedMap() {
       localStorage.setItem(STORAGE_KEYS.processed, JSON.stringify(state.processedMap));
     }
 
+    function loadUploadedIds() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.uploaded);
+        state.uploadedIds = raw ? JSON.parse(raw) : {};
+      } catch (e) { state.uploadedIds = {}; }
+    }
+
+    function saveUploadedIds() {
+      localStorage.setItem(STORAGE_KEYS.uploaded, JSON.stringify(state.uploadedIds));
+    }
+
     function clearProcessedHistory() {
-      if (!confirm("Effacer l'historique local des photos déjà traitées ? (Aucun fichier Drive ne sera supprimé.)")) return;
+      if (!confirm("Effacer l'historique local des fichiers déjà traités ? (Aucun fichier Drive ne sera supprimé.)")) return;
       state.processedMap = {};
       saveProcessedMap();
       renderStats();
@@ -570,7 +588,7 @@
       document.getElementById("scanBtn").disabled = !state.selectedFolder;
 
       if (!state.selectedFolder) {
-        await autoFindMainsCourantes();
+        await autoFindPrudhommes();
       } else {
         setFolderBadge("ok", "✅ Dossier prêt");
       }
@@ -603,11 +621,7 @@
       return res;
     }
 
-    function escapeDriveQuery(str) {
-      return str.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-    }
-
-    async function driveListAll(query, fields = "files(id,name,mimeType)") {
+    async function driveListAll(query, fields = "files(id,name,mimeType,appProperties)") {
       const items = [];
       let pageToken = null;
       do {
@@ -627,37 +641,30 @@
       return items;
     }
 
-    async function autoFindMainsCourantes() {
+    function normalizeFolderName(name) {
+      return (name || "").toLowerCase().replace(/[’']/g, "'").trim();
+    }
+
+    async function autoFindPrudhommes() {
       setFolderBadge("warn", "🔍 Recherche...");
       try {
-        const prudFolders = await driveListAll(
-          `name = '${escapeDriveQuery("Prud'hommes")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+        const allFolders = await driveListAll(
+          `mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+          "files(id,name,parents)"
         );
-        let target = null;
-        let path = "";
 
-        for (const pf of prudFolders) {
-          const mc = await driveListAll(
-            `'${pf.id}' in parents and name = '${escapeDriveQuery("Mains courantes")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
-          );
-          if (mc.length > 0) {
-            target = mc[0];
-            path = "Prud'hommes / Mains courantes";
-            break;
-          }
-        }
-        if (!target) {
-          const fb = await driveListAll(
-            `name = '${escapeDriveQuery("Mains courantes")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
-          );
-          if (fb.length === 1) {
-            target = fb[0];
-            path = "Mains courantes";
-          }
-        }
-        if (target) {
-          setSelectedFolder(target.id, target.name, path);
-          setFolderBadge("ok", "✅ Trouvé");
+        // Priorité : dossier nommé "Prud'hommes" / "Prudhomme" à la racine de Mon Drive
+        const matches = allFolders.filter(f => {
+          const n = normalizeFolderName(f.name);
+          return n.includes("prud'homme") || n.includes("prudhomme");
+        });
+
+        if (matches.length > 0) {
+          // Préfère celui dont le nom est le plus court / exact
+          matches.sort((a, b) => a.name.length - b.name.length);
+          const target = matches[0];
+          setSelectedFolder(target.id, target.name, "Mon Drive / " + target.name);
+          setFolderBadge("ok", "✅ Dossier trouvé");
         } else {
           setFolderBadge("warn", "⚠️ Utilisez Parcourir");
         }
@@ -691,7 +698,8 @@
       listEl.innerHTML = `<div class="hint">Chargement...</div>`;
       document.getElementById("modalBreadcrumb").textContent = modalNav.stack.map(s => s.name).join(" / ");
       const folders = await driveListAll(
-        `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+        `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        "files(id,name)"
       );
       folders.sort((a, b) => a.name.localeCompare(b.name, "fr"));
       if (folders.length === 0) {
@@ -725,42 +733,91 @@
     }
 
     // =====================================================================
-    // SCAN & GESTION CONCURRENTE DES SOUS-DOSSIERS (SAFE POUR LOTS DE 5)
+    // SCAN RÉCURSIF DE TOUS LES SOUS-DOSSIERS (JPG, JPEG, PNG, PDF)
     // =====================================================================
-    async function scanRootImages() {
+    function isSupportedSourceFile(file) {
+      const mime = (file.mimeType || "").toLowerCase();
+      if (mime.startsWith("application/vnd.google-apps.")) return false;
+
+      // Ignore les fichiers déjà produits par l'application
+      if (file.appProperties?.mcSorted === "1") return false;
+      if (state.uploadedIds[file.id]) return false;
+      if (/^\d{2}-\d{2}-\d{4} - [^/]+\.jpg$/i.test(file.name || "")) return false;
+
+      const nameMatch = /\.(jpe?g|png|pdf)$/i.test(file.name || "");
+      const mimeMatch = ["image/jpeg", "image/jpg", "image/png", "application/pdf"].includes(mime);
+      return nameMatch || mimeMatch;
+    }
+
+    async function scanAllSubfolders() {
       if (!state.selectedFolder) return;
       const scanBtn = document.getElementById("scanBtn");
       scanBtn.disabled = true;
-      setProgressStatus("Scan du dossier racine...");
+      setProgressStatus("Scan récursif de tous les dossiers...");
 
       try {
-        const folderId = state.selectedFolder.id;
-        const allFiles = await driveListAll(
-          `'${folderId}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
-          "files(id,name,mimeType)"
-        );
+        const rootId = state.selectedFolder.id;
+        const folderQueue = [{ id: rootId, path: state.selectedFolder.name }];
+        const visitedFolders = new Set([rootId]);
+        const foundFiles = [];
+        let scannedFolderCount = 0;
 
-        state.rootImages = allFiles
-          .filter(f => /\.(jpe?g|png)$/i.test(f.name || ""))
-          .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+        while (folderQueue.length > 0) {
+          const current = folderQueue.shift();
+          scannedFolderCount++;
 
-        await refreshSubfolderCache(folderId);
+          const children = await driveListAll(
+            `'${current.id}' in parents and trashed = false`,
+            "files(id,name,mimeType,appProperties)"
+          );
+
+          for (const item of children) {
+            if (item.mimeType === "application/vnd.google-apps.folder") {
+              // Ne pas entrer dans "À vérifier"
+              if (item.name === "À vérifier") continue;
+              if (!visitedFolders.has(item.id)) {
+                visitedFolders.add(item.id);
+                folderQueue.push({ id: item.id, path: `${current.path}/${item.name}` });
+              }
+            } else if (isSupportedSourceFile(item)) {
+              foundFiles.push({
+                ...item,
+                folderPath: current.path,
+                isPdf: (item.mimeType || "").toLowerCase() === "application/pdf" || /\.pdf$/i.test(item.name || "")
+              });
+            }
+          }
+
+          setProgressStatus(`🔍 ${scannedFolderCount} dossier(s) scanné(s) — ${foundFiles.length} fichier(s) JPG/PDF trouvé(s)...`);
+        }
+
+        foundFiles.sort((a, b) => (a.folderPath + "/" + a.name).localeCompare(b.folderPath + "/" + b.name, "fr"));
+        state.sourceFiles = foundFiles;
+
+        await refreshSubfolderCache(rootId);
         renderStats();
 
-        const remaining = getRemainingImages().length;
+        const remaining = getRemainingFiles().length;
         document.getElementById("startBtn").disabled = remaining === 0;
         document.getElementById("testOneBtn").disabled = remaining === 0;
-        setProgressStatus(remaining > 0 ? `Prêt : ${remaining} photo(s) restante(s)` : "Tout est déjà traité !");
+
+        const pdfCount = foundFiles.filter(f => f.isPdf).length;
+        const imgCount = foundFiles.length - pdfCount;
+        setProgressStatus(
+          remaining > 0
+            ? `Prêt : ${remaining} restant(s) sur ${foundFiles.length} (${imgCount} images, ${pdfCount} PDF)`
+            : `Terminé : les ${foundFiles.length} fichier(s) sont déjà traités !`
+        );
       } catch (err) {
-        alert("Erreur scan : " + err.message);
+        alert("Erreur lors du scan : " + err.message);
         setProgressStatus("Erreur de scan");
       } finally {
         scanBtn.disabled = false;
       }
     }
 
-    function getRemainingImages() {
-      return state.rootImages.filter(f => !state.processedMap[f.id]);
+    function getRemainingFiles() {
+      return state.sourceFiles.filter(f => !state.processedMap[f.id]);
     }
 
     async function refreshSubfolderCache(parentId) {
@@ -817,7 +874,6 @@
         await state.folderFilesInFlight[targetFolderId];
       }
 
-      // Opération synchrone atomique entre les 5 tâches parallèles
       const existingSet = state.folderFilesCache[targetFolderId];
       if (!existingSet.has(desiredName)) {
         existingSet.add(desiredName);
@@ -835,7 +891,12 @@
 
     async function uploadJpegToDrive(blob, fileName, parentFolderId) {
       const boundary = "mc_b_" + Math.random().toString(36).slice(2);
-      const metadata = JSON.stringify({ name: fileName, parents: [parentFolderId], mimeType: "image/jpeg" });
+      const metadata = JSON.stringify({
+        name: fileName,
+        parents: [parentFolderId],
+        mimeType: "image/jpeg",
+        appProperties: { mcSorted: "1" }
+      });
       const body = new Blob([
         `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
         `--${boundary}\r\nContent-Type: image/jpeg\r\n\r\n`,
@@ -847,35 +908,35 @@
         "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink",
         { method: "POST", body }
       );
-      return res.json();
+      const created = await res.json();
+      if (created?.id) {
+        state.uploadedIds[created.id] = true;
+        saveUploadedIds();
+      }
+      return created;
     }
 
     // =====================================================================
-    // TRAITEMENT IMAGE RAPIDE (MINIATURE 1000px + EXPORT 2000px JPEG 0.85)
+    // RENDU IMAGE / PDF + MINIATURE 1000px + EXPORT 2000px JPEG 0.85
     // =====================================================================
-    function drawScaledToCanvas(bitmap, maxSide) {
-      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-      const w = Math.max(1, Math.round(bitmap.width * scale));
-      const h = Math.max(1, Math.round(bitmap.height * scale));
+    function canvasToThumbBase64(sourceCanvasOrBitmap, srcW, srcH) {
+      const scale = Math.min(1, THUMB_MAX_PX / Math.max(srcW, srcH));
+      const w = Math.max(1, Math.round(srcW * scale));
+      const h = Math.max(1, Math.round(srcH * scale));
       const canvas = document.createElement("canvas");
       canvas.width = w;
       canvas.height = h;
-      canvas.getContext("2d").drawImage(bitmap, 0, 0, w, h);
-      return canvas;
-    }
-
-    async function makeGeminiThumbnailBase64(bitmap) {
-      const canvas = drawScaledToCanvas(bitmap, THUMB_MAX_PX);
+      canvas.getContext("2d").drawImage(sourceCanvasOrBitmap, 0, 0, w, h);
       const b64 = canvas.toDataURL("image/jpeg", THUMB_QUALITY).split(",")[1];
       canvas.width = 0;
       canvas.height = 0;
       return b64;
     }
 
-    async function rotateAndExportJpeg(bitmap, clockwiseDeg) {
-      const scale = Math.min(1, EXPORT_MAX_PX / Math.max(bitmap.width, bitmap.height));
-      let w = Math.max(1, Math.round(bitmap.width * scale));
-      let h = Math.max(1, Math.round(bitmap.height * scale));
+    async function rotateAndExportJpeg(sourceCanvasOrBitmap, srcW, srcH, clockwiseDeg) {
+      const scale = Math.min(1, EXPORT_MAX_PX / Math.max(srcW, srcH));
+      let w = Math.max(1, Math.round(srcW * scale));
+      let h = Math.max(1, Math.round(srcH * scale));
 
       const norm = ((Number(clockwiseDeg) || 0) % 360 + 360) % 360;
       const isNear = (a, b) => Math.abs(a - b) < 0.75;
@@ -885,19 +946,19 @@
 
       if (isNear(norm, 0) || isNear(norm, 360)) {
         canvas.width = w; canvas.height = h;
-        ctx.drawImage(bitmap, 0, 0, w, h);
+        ctx.drawImage(sourceCanvasOrBitmap, 0, 0, w, h);
       } else if (isNear(norm, 90)) {
         canvas.width = h; canvas.height = w;
         ctx.translate(h, 0); ctx.rotate(Math.PI / 2);
-        ctx.drawImage(bitmap, 0, 0, w, h);
+        ctx.drawImage(sourceCanvasOrBitmap, 0, 0, w, h);
       } else if (isNear(norm, 180)) {
         canvas.width = w; canvas.height = h;
         ctx.translate(w, h); ctx.rotate(Math.PI);
-        ctx.drawImage(bitmap, 0, 0, w, h);
+        ctx.drawImage(sourceCanvasOrBitmap, 0, 0, w, h);
       } else if (isNear(norm, 270)) {
         canvas.width = h; canvas.height = w;
         ctx.translate(0, w); ctx.rotate(-Math.PI / 2);
-        ctx.drawImage(bitmap, 0, 0, w, h);
+        ctx.drawImage(sourceCanvasOrBitmap, 0, 0, w, h);
       } else {
         const rad = (norm * Math.PI) / 180;
         const cos = Math.abs(Math.cos(rad));
@@ -915,7 +976,7 @@
         ctx.fillRect(0, 0, outW, outH);
         ctx.translate(outW / 2, outH / 2);
         ctx.rotate(rad);
-        ctx.drawImage(bitmap, -w / 2, -h / 2, w, h);
+        ctx.drawImage(sourceCanvasOrBitmap, -w / 2, -h / 2, w, h);
       }
 
       const outBlob = await new Promise((resolve, reject) => {
@@ -953,7 +1014,7 @@
       ]
     };
 
-    const GEMINI_PROMPT = `Analyse cette photo de main courante manuscrite de sécurité en France.
+    const GEMINI_PROMPT = `Analyse cette photo/page de main courante manuscrite de sécurité en France.
 
 1) ROTATION (rotation_clockwise_deg) : angle horaire exact (0, 90, 180, 270, ou angle précis si penchée) pour remettre le texte parfaitement horizontal et à l'endroit dans le sens de lecture.
 
@@ -1008,7 +1069,7 @@
     }
 
     // =====================================================================
-    // NOMMAGE & CLASSEMENT SIMPLIFIÉ
+    // NOMMAGE & CLASSEMENT
     // =====================================================================
     function sanitizePart(str) {
       return (str || "").replace(/[\/\\:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
@@ -1029,7 +1090,7 @@
       return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
     }
 
-    function buildClassification(analysis, originalFilename) {
+    function buildClassification(analysis, originalLabel) {
       const surname = formatSurname(analysis.agent_name);
       const dateOk = isValidDate(analysis.start_year, analysis.start_month, analysis.start_day);
 
@@ -1053,7 +1114,7 @@
         else reason = "À vérifier";
       }
 
-      const baseOriginal = sanitizePart(originalFilename.replace(/\.(jpe?g|png)$/i, ""));
+      const baseOriginal = sanitizePart(originalLabel.replace(/\.(jpe?g|png|pdf)$/i, ""));
       return {
         status: "check",
         targetFolderName: "À vérifier",
@@ -1063,30 +1124,21 @@
     }
 
     // =====================================================================
-    // TRAITEMENT PAR LOTS DE 5 EN PARALLÈLE
+    // TRAITEMENT FICHIER (IMAGE OU PDF) PAR LOTS DE 5 EN PARALLÈLE
     // =====================================================================
-    async function processSingleFile(file, rootFolderId, geminiKey) {
-      const dlRes = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
-      const origBlob = await dlRes.blob();
-      const bitmap = await createImageBitmap(origBlob);
-
-      let rotatedBlob, analysis, decision;
-      try {
-        const thumbB64 = await makeGeminiThumbnailBase64(bitmap);
-        analysis = await analyzeWithGemini(thumbB64, geminiKey);
-        decision = buildClassification(analysis, file.name);
-        rotatedBlob = await rotateAndExportJpeg(bitmap, analysis.rotation_clockwise_deg);
-      } finally {
-        bitmap.close();
-      }
+    async function classifyAndUploadSurface(surface, w, h, labelName, sourceFile, rootFolderId, geminiKey) {
+      const thumbB64 = canvasToThumbBase64(surface, w, h);
+      const analysis = await analyzeWithGemini(thumbB64, geminiKey);
+      const decision = buildClassification(analysis, labelName);
+      const rotatedBlob = await rotateAndExportJpeg(surface, w, h, analysis.rotation_clockwise_deg);
 
       const targetFolderId = await ensureSubfolder(rootFolderId, decision.targetFolderName);
       const finalName = await resolveUniqueFilename(targetFolderId, decision.desiredFilename);
       const uploaded = await uploadJpegToDrive(rotatedBlob, finalName, targetFolderId);
 
-      state.processedMap[file.id] = {
-        fileId: file.id,
-        originalName: file.name,
+      return {
+        originalName: labelName,
+        sourcePath: sourceFile.folderPath || "",
         targetName: uploaded.name || finalName,
         targetFolder: decision.targetFolderName,
         status: decision.status,
@@ -1094,6 +1146,86 @@
         webViewLink: uploaded.webViewLink || "",
         processedAt: new Date().toISOString()
       };
+    }
+
+    async function processSingleFile(file, rootFolderId, geminiKey) {
+      const dlRes = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
+      const origBlob = await dlRes.blob();
+
+      if (file.isPdf) {
+        if (!window.pdfjsLib) throw new Error("PDF.js non chargé.");
+        const arrayBuf = await origBlob.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+        let lastEntry = null;
+
+        try {
+          for (let p = 1; p <= pdf.numPages; p++) {
+            const page = await pdf.getPage(p);
+            const baseVp = page.getViewport({ scale: 1 });
+            const scale = Math.min(3, EXPORT_MAX_PX / Math.max(baseVp.width, baseVp.height));
+            const vp = page.getViewport({ scale });
+
+            const pageCanvas = document.createElement("canvas");
+            pageCanvas.width = Math.round(vp.width);
+            pageCanvas.height = Math.round(vp.height);
+            const ctx = pageCanvas.getContext("2d");
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+
+            await page.render({ canvasContext: ctx, viewport: vp }).promise;
+            const pageLabel = pdf.numPages > 1
+              ? `${file.name.replace(/\.pdf$/i, "")}_p${p}.pdf`
+              : file.name;
+
+            lastEntry = await classifyAndUploadSurface(
+              pageCanvas,
+              pageCanvas.width,
+              pageCanvas.height,
+              pageLabel,
+              file,
+              rootFolderId,
+              geminiKey
+            );
+
+            pageCanvas.width = 0;
+            pageCanvas.height = 0;
+            page.cleanup();
+          }
+        } finally {
+          await pdf.destroy();
+        }
+
+        state.processedMap[file.id] = {
+          fileId: file.id,
+          ...(lastEntry || {
+            originalName: file.name,
+            targetName: file.name,
+            targetFolder: "À vérifier",
+            status: "check",
+            rotationDeg: 0,
+            processedAt: new Date().toISOString()
+          }),
+          pagesCount: pdf.numPages
+        };
+      } else {
+        const bitmap = await createImageBitmap(origBlob);
+        let entry;
+        try {
+          entry = await classifyAndUploadSurface(
+            bitmap,
+            bitmap.width,
+            bitmap.height,
+            file.name,
+            file,
+            rootFolderId,
+            geminiKey
+          );
+        } finally {
+          bitmap.close();
+        }
+        state.processedMap[file.id] = { fileId: file.id, ...entry };
+      }
+
       saveProcessedMap();
       renderStats();
       renderLogs();
@@ -1104,8 +1236,8 @@
       if (!cfg.geminiKey) return alert("Renseignez votre clé API Gemini.");
       if (!state.selectedFolder) return alert("Sélectionnez le dossier Drive.");
 
-      const queue = getRemainingImages();
-      if (queue.length === 0) return alert("Aucune photo restante !");
+      const queue = getRemainingFiles();
+      if (queue.length === 0) return alert("Aucun fichier restant !");
 
       state.isRunning = true;
       state.isPaused = false;
@@ -1142,10 +1274,10 @@
           setProgressStatus(
             errors.length > 0
               ? `⚠️ Terminé avec ${errors.length} erreur(s)`
-              : (singleTest ? "✅ Test 1 photo terminé !" : "✅ Toutes les photos ont été traitées !")
+              : (singleTest ? "✅ Test 1 fichier terminé !" : "✅ Tous les fichiers ont été traités !")
           );
           if (errors.length > 0) {
-            alert("Erreurs sur certaines photos (non marquées comme traitées, vous pouvez relancer) :\n\n" + errors.slice(0, 5).join("\n"));
+            alert("Erreurs sur certains fichiers (non marqués comme traités, vous pouvez relancer) :\n\n" + errors.slice(0, 5).join("\n"));
           }
         }
       } finally {
@@ -1165,7 +1297,7 @@
     }
 
     function updateControlButtons() {
-      const remaining = getRemainingImages().length;
+      const remaining = getRemainingFiles().length;
       const startBtn = document.getElementById("startBtn");
       const testBtn = document.getElementById("testOneBtn");
       const pauseBtn = document.getElementById("pauseBtn");
@@ -1196,24 +1328,24 @@
     }
 
     function renderStats() {
-      const total = state.rootImages.length;
-      const rootIds = new Set(state.rootImages.map(f => f.id));
+      const total = state.sourceFiles.length;
+      const sourceIds = new Set(state.sourceFiles.map(f => f.id));
 
-      let okCount = 0, checkCount = 0, doneInRoot = 0;
+      let okCount = 0, checkCount = 0, doneInSource = 0;
       for (const e of Object.values(state.processedMap)) {
         if (e.status === "ok") okCount++;
         else checkCount++;
-        if (rootIds.has(e.fileId)) doneInRoot++;
+        if (sourceIds.has(e.fileId)) doneInSource++;
       }
 
-      const remaining = Math.max(0, total - doneInRoot);
-      const pct = total > 0 ? Math.round((doneInRoot / total) * 100) : 0;
+      const remaining = Math.max(0, total - doneInSource);
+      const pct = total > 0 ? Math.round((doneInSource / total) * 100) : 0;
 
       document.getElementById("statTotal").textContent = total;
       document.getElementById("statOk").textContent = okCount;
       document.getElementById("statCheck").textContent = checkCount;
       document.getElementById("statRemaining").textContent = remaining;
-      document.getElementById("progressCount").textContent = `${doneInRoot} / ${total} (${pct}%)`;
+      document.getElementById("progressCount").textContent = `${doneInSource} / ${total} (${pct}%)`;
       document.getElementById("progressFill").style.width = `${pct}%`;
       document.getElementById("historyInfo").textContent = `${Object.keys(state.processedMap).length} en mémoire`;
     }
@@ -1233,13 +1365,14 @@
         const cls = e.status === "ok" ? "ok" : "check";
         const icon = e.status === "ok" ? "✅" : "⚠️";
         const link = e.webViewLink ? `<a href="${escapeHtml(e.webViewLink)}" target="_blank" rel="noopener">Ouvrir ↗</a>` : "";
+        const src = e.sourcePath ? `${e.sourcePath}/` : "";
         return `
           <div class="log-item ${cls}">
             <div class="log-top">
               <span>${icon} ${escapeHtml(e.targetFolder)} / ${escapeHtml(e.targetName)}</span>
               ${link}
             </div>
-            <div class="log-sub">${escapeHtml(e.originalName)} • ${e.rotationDeg}°</div>
+            <div class="log-sub">${escapeHtml(src + e.originalName)} • ${e.rotationDeg}°</div>
           </div>
         `;
       }).join("");
