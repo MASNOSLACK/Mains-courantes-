@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Mains Courantes — Classement Définitif & Doublons</title>
+  <title>Mains Courantes — Définitif, PDF & Doublons</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     :root {
       --bg: #0f172a;
@@ -326,7 +327,7 @@
         </div>
 
         <div class="hint">
-          Relèves : <strong>Chef-de-poste</strong> (Nicolas), <strong>Macia</strong>, <strong>Godini</strong>, <strong>Paladi</strong>, <strong>Beroubache</strong>, <strong>Besson</strong>, <strong>Hernandez</strong>, <strong>Potier</strong>, <strong>Ranucci</strong> • L'année/date est récupérée sur la fiche relève si absente sur votre fiche.
+          Relèves : <strong>Chef-de-poste</strong> (Nicolas), <strong>Macia</strong>, <strong>Godini</strong>, <strong>Paladi</strong>, <strong>Beroubache</strong>, <strong>Besson</strong>, <strong>Hernandez</strong>, <strong>Potier</strong>, <strong>Ranucci</strong> • Protection anti-crash PDF incluse.
         </div>
 
         <div class="btn-row">
@@ -345,7 +346,7 @@
 
       <div class="hint" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
         <div>
-          <strong>Source (déjà classés) :</strong> <span id="srcFolderName">Aucun</span>
+          <strong>Source :</strong> <span id="srcFolderName">Aucun</span>
           <div id="srcFolderPath" style="font-size:0.74rem;"></div>
         </div>
         <div class="btn-row">
@@ -366,8 +367,13 @@
       </div>
 
       <label class="checkbox-row">
+        <input type="checkbox" id="includeUnclassifiedCheck" />
+        Inclure aussi les PDF (.pdf) et fichiers non encore classés
+      </label>
+
+      <label class="checkbox-row">
         <input type="checkbox" id="includeVerifyCheck" />
-        Inclure aussi le dossier "À vérifier" (pour récupérer les pages où l'année manquait)
+        Inclure aussi le dossier "À vérifier" (récupérer les pages sans année)
       </label>
 
       <div class="btn-row">
@@ -430,6 +436,11 @@
   </div>
 
   <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+
     // =====================================================================
     // CONSTANTES & LISTE OFFICIELLE DES AGENTS DE RELÈVE
     // =====================================================================
@@ -782,7 +793,7 @@
       modalNav.target = target;
       modalNav.stack = [{ id: "root", name: "Mon Drive" }];
       document.getElementById("modalTitle").textContent =
-        target === "source" ? "📂 Dossier SOURCE (déjà classés)" : "📂 Dossier DÉFINITIF (Mains Courantes)";
+        target === "source" ? "📂 Dossier SOURCE" : "📂 Dossier DÉFINITIF (Mains Courantes)";
       document.getElementById("folderModal").classList.remove("hidden");
       await loadModalFolder("root");
     }
@@ -870,15 +881,10 @@
         return { canonical: "Inconnu", inRoster: false, known: false };
       }
 
-      // Chef de poste (Nicolas / Chef de Nicolas / Chef de poste / CDP)
-      if (
-        low.includes("chef") || low.includes("nicolas") ||
-        /\bcdp\b/.test(low) || low.includes("poste")
-      ) {
+      if (low.includes("chef") || low.includes("nicolas") || /\bcdp\b/.test(low) || low.includes("poste")) {
         return { canonical: "Chef-de-poste", inRoster: true, known: true };
       }
 
-      // Prénoms uniques de la liste (hors Adrien qui correspond à Hernandez ET Ranucci)
       const uniqueFirstNames = [
         ["didier", "Macia"],
         ["laurent", "Godini"],
@@ -892,7 +898,6 @@
         if (low.includes(fn)) return { canonical: surname, inRoster: true, known: true };
       }
 
-      // Correspondance directe + variantes + distance phonétique/orthographique
       const tokens = low.split(/\s+/);
       let bestCandidate = null;
       let bestScore = Infinity;
@@ -920,7 +925,6 @@
         return { canonical: bestCandidate, inRoster: true, known: true };
       }
 
-      // Autre nom lisible hors liste
       const title = cleaned
         .toLowerCase()
         .replace(/(^|[\s-])([a-zàâäéèêëîïôöùûüç])/g, (m, sep, ch) => sep + ch.toUpperCase())
@@ -1001,13 +1005,14 @@
     }
 
     // =====================================================================
-    // SCAN DES FICHIERS DÉJÀ CLASSÉS (+ OPTION "À VÉRIFIER")
+    // SCAN DES FICHIERS
     // =====================================================================
     async function scanClassifiedFiles() {
       if (!state.srcFolder || !state.dstFolder) return;
       const scanBtn = document.getElementById("scanBtn");
       scanBtn.disabled = true;
       const includeVerify = document.getElementById("includeVerifyCheck").checked;
+      const includeUnclassified = document.getElementById("includeUnclassifiedCheck").checked;
       setProgressStatus("Scan des fichiers en cours...");
 
       try {
@@ -1024,7 +1029,8 @@
           );
 
           for (const item of children) {
-            if (item.mimeType === "application/vnd.google-apps.folder") {
+            const mime = (item.mimeType || "").toLowerCase();
+            if (mime === "application/vnd.google-apps.folder") {
               if (item.name === "Doublons") continue;
               const isVerify = item.name === "À vérifier";
               if (isVerify && !includeVerify) continue;
@@ -1039,13 +1045,24 @@
                   inVerifyFolder: cur.inVerifyFolder || isVerify
                 });
               }
-            } else if (/\.(jpe?g|png)$/i.test(item.name || "")) {
-              const parsed = parseClassifiedFilename(item.name);
-              if (cur.inYearFolder || parsed || (includeVerify && cur.inVerifyFolder)) {
+            } else if (!mime.startsWith("application/vnd.google-apps.")) {
+              const name = item.name || "";
+              const isImg = /\.(jpe?g|png)$/i.test(name) || ["image/jpeg", "image/jpg", "image/png"].includes(mime);
+              const isPdf = /\.pdf$/i.test(name) || mime === "application/pdf";
+              if (!isImg && !isPdf) continue;
+
+              const parsed = parseClassifiedFilename(name);
+              const isClassified = cur.inYearFolder || Boolean(parsed);
+
+              if (
+                (isImg && (isClassified || includeUnclassified || (includeVerify && cur.inVerifyFolder))) ||
+                (isPdf && (includeUnclassified || (includeVerify && cur.inVerifyFolder)))
+              ) {
                 found.push({
                   ...item,
                   folderPath: cur.path,
                   fromVerify: cur.inVerifyFolder,
+                  isPdf,
                   parsed
                 });
               }
@@ -1366,8 +1383,20 @@ Fais la MEILLEURE correspondance possible (même si l'écriture manuscrite est i
     }
 
     // =====================================================================
-    // CANVAS
+    // CANVAS & LECTURE ROBUSTE DES PDF (ANTI "INVALID PDF STRUCTURE")
     // =====================================================================
+    function findAsciiBytes(bytes, str, maxScan = 4096) {
+      const limit = Math.min(bytes.length - str.length, maxScan);
+      for (let i = 0; i <= limit; i++) {
+        let match = true;
+        for (let j = 0; j < str.length; j++) {
+          if (bytes[i + j] !== str.charCodeAt(j)) { match = false; break; }
+        }
+        if (match) return i;
+      }
+      return -1;
+    }
+
     async function decodeImageBlob(blob) {
       try {
         const bmp = await createImageBitmap(blob);
@@ -1451,12 +1480,13 @@ Fais la MEILLEURE correspondance possible (même si l'écriture manuscrite est i
       return `${pad2(sm)}-${pad2(sd)}_${sy}_au_${pad2(em)}-${pad2(ed)}_${ey}`;
     }
 
-    async function placeFileInDefinitive(sourceFile, meta, rotatedBlob) {
+    async function placeFileInDefinitive(sourceFile, meta, rotatedBlob, verifyPrefix = "") {
       const dstRootId = state.dstFolder.id;
 
       if (!isValidDate(meta.sy, meta.sm, meta.sd)) {
         const verifId = await ensureSubfolder(dstRootId, "À vérifier");
-        const finalName = await resolveUniqueFilename(verifId, sourceFile.name);
+        const desired = verifyPrefix ? `${verifyPrefix}${sourceFile.name}` : sourceFile.name;
+        const finalName = await resolveUniqueFilename(verifId, desired);
         const up = rotatedBlob
           ? await uploadJpegToDrive(rotatedBlob, finalName, verifId)
           : await driveCopyFile(sourceFile.id, finalName, verifId);
@@ -1542,63 +1572,146 @@ Fais la MEILLEURE correspondance possible (même si l'écriture manuscrite est i
     }
 
     // =====================================================================
-    // TRAITEMENT D'UN FICHIER
+    // ANALYSE D'UNE SURFACE (IMAGE OU PAGE PDF)
+    // =====================================================================
+    async function analyzeAndPlaceSurface(surface, w, h, sourceFile, parsed, parsedRel, geminiKey, model, forceExportJpeg = false) {
+      const b64 = makeThumbBase64(surface, w, h);
+      const ai = await analyzeWithGemini(b64, geminiKey, model);
+
+      const aiStartYear = normalizeYear(ai.start_year);
+      const aiEndYear = normalizeYear(ai.end_year);
+      const aiDateOk = isValidDate(aiStartYear, ai.start_month, ai.start_day);
+      const pDateOk = parsed && isValidDate(parsed.startYear, parsed.startMonth, parsed.startDay);
+
+      const sy = aiDateOk ? aiStartYear : (pDateOk ? normalizeYear(parsed.startYear) : 0);
+      const sm = aiDateOk ? ai.start_month : (pDateOk ? parsed.startMonth : 0);
+      const sd = aiDateOk ? ai.start_day : (pDateOk ? parsed.startDay : 0);
+      const ey = aiDateOk ? aiEndYear : (pDateOk ? normalizeYear(parsed.endYear) : 0);
+      const em = aiDateOk ? ai.end_month : (pDateOk ? parsed.endMonth : 0);
+      const ed = aiDateOk ? ai.end_day : (pDateOk ? parsed.endDay : 0);
+
+      const shiftType = ["Jour", "Nuit", "Jour-et-Nuit"].includes(ai.shift_type)
+        ? ai.shift_type
+        : (parsed?.shiftType || "Vacation-Inconnue");
+
+      const aiRelRaw = ai.relief_match === "Autre" ? ai.other_surname : ai.relief_match;
+      const aiRel = canonicalizeRelief(aiRelRaw);
+      const bestRel = aiRel.inRoster ? aiRel : (parsedRel.inRoster ? parsedRel : (aiRel.known ? aiRel : parsedRel));
+
+      const deg = ((Number(ai.rotation_clockwise_deg) || 0) % 360 + 360) % 360;
+      let rotatedBlob = null;
+      if (forceExportJpeg || (deg > 0.75 && deg < 359.25)) {
+        rotatedBlob = await rotateAndExportJpeg(surface, w, h, deg);
+      }
+
+      const meta = {
+        sy, sm, sd, ey, em, ed, shiftType,
+        reliefCanonical: bestRel.canonical,
+        isKnownRelief: bestRel.known
+      };
+
+      return placeFileInDefinitive(sourceFile, meta, rotatedBlob);
+    }
+
+    // =====================================================================
+    // TRAITEMENT D'UN FICHIER (IMAGE OU PDF AVEC PROTECTION ANTI-CRASH)
     // =====================================================================
     async function processClassifiedFile(file, mode, geminiKey, model) {
       const p = file.parsed;
       const parsedRel = p ? canonicalizeRelief(p.reliefRaw) : { canonical: "Inconnu", inRoster: false, known: false };
 
+      if (file.isPdf) {
+        if (!geminiKey) throw new Error("Clé Gemini requise pour lire les PDF.");
+        const dlRes = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&supportsAllDrives=true`);
+        const origBlob = await dlRes.blob();
+        const buf = await origBlob.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+
+        // Cas 1 : Image JPEG/PNG déguisée en .pdf
+        const isJpeg = bytes.length >= 3 && bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF;
+        const isPng = bytes.length >= 4 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
+        if (isJpeg || isPng) {
+          const imgBlob = new Blob([buf], { type: isJpeg ? "image/jpeg" : "image/png" });
+          const decoded = await decodeImageBlob(imgBlob);
+          let placed;
+          try {
+            placed = await analyzeAndPlaceSurface(decoded.source, decoded.width, decoded.height, file, p, parsedRel, geminiKey, model, true);
+          } finally {
+            decoded.close();
+          }
+          markProcessed(file, placed);
+          return;
+        }
+
+        // Cas 2 : Vrai PDF (recherche de %PDF- tolérante aux octets en début de fichier)
+        const pdfOffset = findAsciiBytes(bytes, "%PDF-", 4096);
+        if (pdfOffset === -1 || !window.pdfjsLib) {
+          // PDF vide / corrompu : on le met dans "À vérifier" sans bloquer le lot
+          const placed = await placeFileInDefinitive(file, { sy: 0, sm: 0, sd: 0 }, null, "PDF invalide - ");
+          markProcessed(file, placed);
+          return;
+        }
+
+        const cleanPdfBytes = pdfOffset > 0 ? bytes.subarray(pdfOffset) : bytes;
+        let pdf = null;
+        try {
+          pdf = await pdfjsLib.getDocument({ data: cleanPdfBytes, verbosity: 0 }).promise;
+          let lastPlaced = null;
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const baseVp = page.getViewport({ scale: 1 });
+            const scale = Math.min(3, EXPORT_MAX_PX / Math.max(baseVp.width, baseVp.height));
+            const vp = page.getViewport({ scale });
+
+            const pageCanvas = document.createElement("canvas");
+            pageCanvas.width = Math.round(vp.width);
+            pageCanvas.height = Math.round(vp.height);
+            const ctx = pageCanvas.getContext("2d");
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+
+            await page.render({ canvasContext: ctx, viewport: vp }).promise;
+            lastPlaced = await analyzeAndPlaceSurface(
+              pageCanvas, pageCanvas.width, pageCanvas.height,
+              file, p, parsedRel, geminiKey, model, true
+            );
+
+            pageCanvas.width = 0;
+            pageCanvas.height = 0;
+            page.cleanup();
+          }
+          markProcessed(file, lastPlaced || { status: "check", destPath: "À vérifier", webViewLink: "" });
+        } catch (pdfErr) {
+          // Si PDF.js renvoie encore "Invalid PDF structure", on met dans "À vérifier" et on continue !
+          if (/pdf|structure|corrupt|password/i.test(pdfErr?.message || "")) {
+            const placed = await placeFileInDefinitive(file, { sy: 0, sm: 0, sd: 0 }, null, "PDF invalide - ");
+            markProcessed(file, placed);
+          } else {
+            throw pdfErr;
+          }
+        } finally {
+          if (pdf) await pdf.destroy();
+        }
+        return;
+      }
+
+      // Fichiers Images (.jpg, .png)
       const needGemini =
         mode === "all_gemini" ||
         (mode === "smart" && (file.fromVerify || !p || !isValidDate(p.startYear, p.startMonth, p.startDay) || !parsedRel.inRoster));
 
-      let meta = null;
-      let rotatedBlob = null;
-
+      let placed;
       if (needGemini) {
         const dlRes = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&supportsAllDrives=true`);
         const origBlob = await dlRes.blob();
         const decoded = await decodeImageBlob(origBlob);
-
         try {
-          const b64 = makeThumbBase64(decoded.source, decoded.width, decoded.height);
-          const ai = await analyzeWithGemini(b64, geminiKey, model);
-
-          const aiStartYear = normalizeYear(ai.start_year);
-          const aiEndYear = normalizeYear(ai.end_year);
-          const aiDateOk = isValidDate(aiStartYear, ai.start_month, ai.start_day);
-          const pDateOk = p && isValidDate(p.startYear, p.startMonth, p.startDay);
-
-          const sy = aiDateOk ? aiStartYear : (pDateOk ? normalizeYear(p.startYear) : 0);
-          const sm = aiDateOk ? ai.start_month : (pDateOk ? p.startMonth : 0);
-          const sd = aiDateOk ? ai.start_day : (pDateOk ? p.startDay : 0);
-          const ey = aiDateOk ? aiEndYear : (pDateOk ? normalizeYear(p.endYear) : 0);
-          const em = aiDateOk ? ai.end_month : (pDateOk ? p.endMonth : 0);
-          const ed = aiDateOk ? ai.end_day : (pDateOk ? p.endDay : 0);
-
-          const shiftType = ["Jour", "Nuit", "Jour-et-Nuit"].includes(ai.shift_type)
-            ? ai.shift_type
-            : (p?.shiftType || "Vacation-Inconnue");
-
-          const aiRelRaw = ai.relief_match === "Autre" ? ai.other_surname : ai.relief_match;
-          const aiRel = canonicalizeRelief(aiRelRaw);
-          const bestRel = aiRel.inRoster ? aiRel : (parsedRel.inRoster ? parsedRel : (aiRel.known ? aiRel : parsedRel));
-
-          const deg = ((Number(ai.rotation_clockwise_deg) || 0) % 360 + 360) % 360;
-          if (deg > 0.75 && deg < 359.25) {
-            rotatedBlob = await rotateAndExportJpeg(decoded.source, decoded.width, decoded.height, deg);
-          }
-
-          meta = {
-            sy, sm, sd, ey, em, ed, shiftType,
-            reliefCanonical: bestRel.canonical,
-            isKnownRelief: bestRel.known
-          };
+          placed = await analyzeAndPlaceSurface(decoded.source, decoded.width, decoded.height, file, p, parsedRel, geminiKey, model, false);
         } finally {
           decoded.close();
         }
       } else {
-        meta = {
+        const meta = {
           sy: p ? normalizeYear(p.startYear) : 0,
           sm: p ? p.startMonth : 0,
           sd: p ? p.startDay : 0,
@@ -1609,10 +1722,13 @@ Fais la MEILLEURE correspondance possible (même si l'écriture manuscrite est i
           reliefCanonical: parsedRel.canonical,
           isKnownRelief: parsedRel.known
         };
+        placed = await placeFileInDefinitive(file, meta, null);
       }
 
-      const placed = await placeFileInDefinitive(file, meta, rotatedBlob);
+      markProcessed(file, placed);
+    }
 
+    function markProcessed(file, placed) {
       state.processedMap[file.id] = {
         fileId: file.id,
         originalName: file.name,
