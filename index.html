@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Tri Mains Courantes — Prud'hommes (JPG & PDF)</title>
+  <title>Tri Mains Courantes — Prud'hommes (Relèves)</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
@@ -269,7 +269,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>⚡ Tri Prud'hommes (JPG & PDF • x5)</h1>
+      <h1>⚡ Tri Prud'hommes (Relèves)</h1>
       <span id="authBadge" class="badge">⚪ Non connecté</span>
     </header>
 
@@ -292,14 +292,27 @@
           </label>
         </div>
 
-        <label>
-          Modèle Gemini
-          <select id="modelSelect">
-            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Le plus rapide — Recommandé)</option>
-            <option value="gemini-3.8-flash">gemini-3.8-flash (Très haute précision)</option>
-            <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Ancien modèle)</option>
-          </select>
-        </label>
+        <div class="grid-2">
+          <label>
+            Modèle Gemini
+            <select id="modelSelect">
+              <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Rapide — Recommandé)</option>
+              <option value="gemini-3.8-flash">gemini-3.8-flash (Haute précision)</option>
+              <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Ancien modèle)</option>
+            </select>
+          </label>
+          <label>
+            Cadence d'envoi
+            <select id="speedSelect">
+              <option value="fast">⚡ Rapide — Lots de 5 en parallèle (Clé facturée)</option>
+              <option value="free">🐢 Mode Gratuit — 1 fichier toutes les 5s (Max 12/min)</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="hint">
+          Format généré : <strong>septembre 08 2025 relève Paladi nuit.jpg</strong> (dans le dossier de l'année, ou <strong>À vérifier</strong>).
+        </div>
 
         <div class="btn-row">
           <button class="btn-ghost" onclick="saveConfig()">💾 Sauvegarder</button>
@@ -354,7 +367,7 @@
       </div>
 
       <div class="btn-row">
-        <button id="startBtn" class="btn-success btn-grow" onclick="startProcessing(false)" disabled>⚡ Traiter par lots de 5</button>
+        <button id="startBtn" class="btn-success btn-grow" onclick="startProcessing(false)" disabled>▶️ Lancer le tri</button>
         <button id="testOneBtn" class="btn-ghost" onclick="startProcessing(true)" disabled>🧪 Tester 1 fichier</button>
         <button id="pauseBtn" class="btn-warn btn-grow hidden" onclick="togglePause()">⏸️ Pause</button>
       </div>
@@ -398,11 +411,15 @@
     // CONSTANTES & ÉTAT
     // =====================================================================
     const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
-    const BATCH_SIZE = 5;
     const THUMB_MAX_PX = 1000;
     const THUMB_QUALITY = 0.6;
     const EXPORT_MAX_PX = 2000;
     const EXPORT_QUALITY = 0.85;
+
+    const MONTHS_FR = [
+      "", "janvier", "février", "mars", "avril", "mai", "juin",
+      "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+    ];
 
     const STORAGE_KEYS = {
       config: "mc_sorter_config_v1",
@@ -426,7 +443,7 @@
       sourceFiles: [],
       processedMap: {},
       uploadedIds: {},
-      recentErrors: [], // Erreurs visibles dans le journal sans polluer processedMap
+      recentErrors: [],
 
       isRunning: false,
       isPaused: false
@@ -455,9 +472,8 @@
         if (cfg.clientId) document.getElementById("clientIdInput").value = cfg.clientId;
         if (cfg.geminiKey) document.getElementById("geminiKeyInput").value = cfg.geminiKey;
         const sel = document.getElementById("modelSelect");
-        if (cfg.model && [...sel.options].some(o => o.value === cfg.model)) {
-          sel.value = cfg.model;
-        }
+        if (cfg.model && [...sel.options].some(o => o.value === cfg.model)) sel.value = cfg.model;
+        if (cfg.speed) document.getElementById("speedSelect").value = cfg.speed;
       } catch (e) {}
     }
 
@@ -465,7 +481,8 @@
       const cfg = {
         clientId: document.getElementById("clientIdInput").value.trim(),
         geminiKey: document.getElementById("geminiKeyInput").value.trim(),
-        model: document.getElementById("modelSelect").value
+        model: document.getElementById("modelSelect").value,
+        speed: document.getElementById("speedSelect").value
       };
       localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(cfg));
       if (!silent) alert("Configuration sauvegardée.");
@@ -668,7 +685,7 @@
       const res = await fetch(url, { ...options, headers });
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Drive (${res.status}): ${text.slice(0, 180)}`);
+        throw new Error(`Drive (${res.status}): ${text.slice(0, 220)}`);
       }
       return res;
     }
@@ -790,9 +807,12 @@
       if (mime.startsWith("application/vnd.google-apps.")) return false;
       if (file.appProperties?.mcSorted === "1") return false;
       if (state.uploadedIds[file.id]) return false;
-      if (/^\d{2}-\d{2}-\d{4} - [^/]+\.jpg$/i.test(file.name || "")) return false;
 
-      const nameMatch = /\.(jpe?g|png|pdf)$/i.test(file.name || "");
+      const name = file.name || "";
+      if (/^\d{2}-\d{2}-\d{4} - [^/]+\.jpg$/i.test(name)) return false;
+      if (/^(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre) \d{2} \d{4} relève .+\.jpg$/i.test(name)) return false;
+
+      const nameMatch = /\.(jpe?g|png|pdf)$/i.test(name);
       const mimeMatch = ["image/jpeg", "image/jpg", "image/png", "application/pdf"].includes(mime);
       return nameMatch || mimeMatch;
     }
@@ -971,7 +991,6 @@
         const bmp = await createImageBitmap(blob);
         return { source: bmp, width: bmp.width, height: bmp.height, close: () => bmp.close() };
       } catch {
-        // Secours via <img> si createImageBitmap échoue sur un JPEG particulier
         const url = URL.createObjectURL(blob);
         const img = await new Promise((resolve, reject) => {
           const el = new Image();
@@ -1057,7 +1076,7 @@
     }
 
     // =====================================================================
-    // GEMINI API (COMPATIBLE 3.5-FLASH-LITE / 3.8-FLASH / 2.5-FLASH-LITE)
+    // GEMINI API (EXTRACTION DATE + RELÈVES + JOUR/NUIT)
     // =====================================================================
     function getThinkingConfig(model) {
       if (model.includes("2.5")) return { thinkingConfig: { thinkingBudget: 0 } };
@@ -1075,7 +1094,11 @@
         start_day: { type: "INTEGER" },
         start_month: { type: "INTEGER" },
         start_year: { type: "INTEGER" },
-        agent_name: { type: "STRING" }
+        relief_names: { type: "STRING" },
+        shift_type: {
+          type: "STRING",
+          enum: ["jour", "nuit", "jour et nuit", "inconnu"]
+        }
       },
       required: [
         "is_logbook",
@@ -1085,7 +1108,8 @@
         "start_day",
         "start_month",
         "start_year",
-        "agent_name"
+        "relief_names",
+        "shift_type"
       ]
     };
 
@@ -1094,12 +1118,28 @@
 1) ROTATION (rotation_clockwise_deg) : angle horaire exact (0, 90, 180, 270, ou angle précis si penchée) pour remettre le texte parfaitement horizontal et à l'endroit dans le sens de lecture.
 
 2) LISIBILITÉ :
-- is_logbook : true si c'est bien une main courante de sécurité, false sinon.
-- is_readable : true si la DATE complète (jour, mois, année) ET le NOM sont lisibles et non coupés. Sinon false avec une courte raison en français dans doubt_reason (ex: "Date coupée", "Année manquante", "Nom illisible", "Image floue", "Pas une main courante").
+- is_logbook : true si c'est une main courante de sécurité, false sinon.
+- is_readable : true si la DATE complète (jour, mois, année) ET le(s) NOM(s) de relève sont lisibles et non coupés. Sinon false avec une courte raison en français dans doubt_reason (ex: "Date coupée", "Année manquante", "Relève illisible", "Image floue", "Pas une main courante").
 
-3) DEUX INFORMATIONS UNIQUEMENT :
-- DATE (attention format français JJ/MM/AAAA) : start_day (1..31), start_month (1..12), start_year (4 chiffres ex: 2025). Si double page, prendre la vacation de Guillaume BEDOUET si visible.
-- NOM (agent_name) : uniquement le nom de famille de l'agent qui fait la relève, OU le nom de famille de l'agent présent si un seul nom figure sur la page. Chaîne vide si illisible.`;
+3) INFORMATIONS À EXTRAIRE :
+- DATE (attention format français JJ/MM/AAAA) : start_day (1..31), start_month (1..12), start_year (4 chiffres ex: 2025). Si double page, cibler la vacation de Guillaume BEDOUET si visible.
+- RELÈVES (relief_names) : uniquement le(s) nom(s) de famille du ou des agents qui font la relève (avant et/ou après), séparés par " - " s'il y en a deux (ex: "Paladi" ou "Dupont - Paladi"). Si un seul nom figure sur la page, mettre ce nom de famille. Chaîne vide si illisible.
+- VACATION (shift_type) : "jour", "nuit", "jour et nuit", ou "inconnu".`;
+
+    function parseRetryDelayMs(errJson, rawText) {
+      try {
+        const details = errJson?.error?.details || [];
+        for (const d of details) {
+          if (d.retryDelay) {
+            const sec = parseFloat(String(d.retryDelay).replace("s", ""));
+            if (!Number.isNaN(sec)) return Math.min(65000, Math.ceil((sec + 1) * 1000));
+          }
+        }
+      } catch {}
+      const m = rawText.match(/retry in\s+([\d.]+)s/i);
+      if (m) return Math.min(65000, Math.ceil((parseFloat(m[1]) + 1) * 1000));
+      return null;
+    }
 
     async function analyzeWithGemini(base64Thumb, geminiKey, model) {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
@@ -1117,8 +1157,7 @@
         }
       };
 
-      const delays = [1500, 3500, 8000];
-      for (let attempt = 0; attempt <= delays.length; attempt++) {
+      for (let attempt = 0; attempt < 4; attempt++) {
         const res = await fetch(endpoint, {
           method: "POST",
           headers: {
@@ -1136,29 +1175,50 @@
         }
 
         const errText = await res.text();
-        if ((res.status === 429 || res.status === 503) && attempt < delays.length) {
-          await sleep(delays[attempt]);
+        let errJson = null;
+        try { errJson = JSON.parse(errText); } catch {}
+        const cleanMsg = errJson?.error?.message || errText;
+
+        // Si quota à 0, inutile d'attendre : arrêt immédiat avec message clair
+        if (/limit:\s*0\b/i.test(cleanMsg)) {
+          const err = new Error(`Quota Gemini à 0 (limit: 0). Activez la facturation sur aistudio.google.com ou créez une clé avec quota actif. Détail : ${cleanMsg}`);
+          err.isFatalApi = true;
+          throw err;
+        }
+
+        if ((res.status === 429 || res.status === 503) && attempt < 3) {
+          const waitMs = parseRetryDelayMs(errJson, cleanMsg) || [4000, 12000, 30000][attempt];
+          setProgressStatus(`⏳ Quota temporaire (${res.status}), pause de ${Math.round(waitMs / 1000)}s...`);
+          await sleep(waitMs);
           continue;
         }
-        const err = new Error(`Gemini (${res.status}): ${errText.slice(0, 200)}`);
-        err.isFatalApi = [400, 401, 403, 404].includes(res.status);
+
+        const err = new Error(`Gemini (${res.status}): ${cleanMsg}`);
+        err.isFatalApi = [400, 401, 403, 404, 429].includes(res.status);
         throw err;
       }
     }
 
     // =====================================================================
-    // NOMMAGE & CLASSEMENT
+    // NOMMAGE : "septembre 08 2025 relève [Nom] [jour/nuit].jpg"
     // =====================================================================
     function sanitizePart(str) {
       return (str || "").replace(/[\/\\:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
     }
 
-    function formatSurname(raw) {
+    function formatReliefNames(raw) {
       const cleaned = sanitizePart(raw);
       if (!cleaned) return "";
       return cleaned
-        .toLowerCase()
-        .replace(/(^|[\s-])([a-zàâäéèêëîïôöùûüç])/g, (m, sep, ch) => sep + ch.toUpperCase());
+        .split(/\s*[,;/]\s*|\s+-\s+/)
+        .map(part =>
+          part
+            .trim()
+            .toLowerCase()
+            .replace(/(^|[\s-])([a-zàâäéèêëîïôöùûüç])/g, (m, sep, ch) => sep + ch.toUpperCase())
+        )
+        .filter(Boolean)
+        .join(" - ");
     }
 
     function isValidDate(y, m, d) {
@@ -1169,17 +1229,21 @@
     }
 
     function buildClassification(analysis, originalLabel) {
-      const surname = formatSurname(analysis.agent_name);
+      const reliefs = formatReliefNames(analysis.relief_names);
       const dateOk = isValidDate(analysis.start_year, analysis.start_month, analysis.start_day);
 
-      if (analysis.is_logbook && analysis.is_readable && dateOk && surname.length > 0) {
-        const mm = String(analysis.start_month).padStart(2, "0");
+      if (analysis.is_logbook && analysis.is_readable && dateOk && reliefs.length > 0) {
+        const monthWord = MONTHS_FR[analysis.start_month];
         const jj = String(analysis.start_day).padStart(2, "0");
         const aaaa = String(analysis.start_year);
+        const shift = ["jour", "nuit", "jour et nuit"].includes(analysis.shift_type)
+          ? ` ${analysis.shift_type}`
+          : "";
+
         return {
           status: "ok",
           targetFolderName: aaaa,
-          desiredFilename: `${mm}-${jj}-${aaaa} - ${surname}.jpg`,
+          desiredFilename: `${monthWord} ${jj} ${aaaa} relève ${reliefs}${shift}.jpg`,
           reason: ""
         };
       }
@@ -1188,7 +1252,7 @@
       if (!reason) {
         if (!analysis.is_logbook) reason = "Pas une main courante";
         else if (!dateOk) reason = "Date illisible";
-        else if (!surname) reason = "Nom illisible";
+        else if (!reliefs) reason = "Relève illisible";
         else reason = "À vérifier";
       }
 
@@ -1202,7 +1266,7 @@
     }
 
     // =====================================================================
-    // TRAITEMENT FICHIER (IMAGE OU PDF) PAR LOTS DE 5
+    // TRAITEMENT FICHIER (IMAGE OU PDF)
     // =====================================================================
     async function classifyAndUploadSurface(surface, w, h, labelName, sourceFile, rootFolderId, geminiKey, model) {
       const thumbB64 = canvasToThumbBase64(surface, w, h);
@@ -1330,18 +1394,20 @@
       const rootFolderId = state.selectedFolder.id;
       const toProcess = singleTest ? queue.slice(0, 1) : queue;
       const total = toProcess.length;
+      const isFreeMode = cfg.speed === "free";
+      const batchSize = isFreeMode ? 1 : 5;
       let errorCount = 0;
 
       try {
-        for (let i = 0; i < total; i += BATCH_SIZE) {
+        for (let i = 0; i < total; i += batchSize) {
           if (state.isPaused) {
             setProgressStatus("⏸️ En pause — progression sauvegardée.");
             break;
           }
 
-          const batch = toProcess.slice(i, i + BATCH_SIZE);
+          const batch = toProcess.slice(i, i + batchSize);
           const endIdx = Math.min(i + batch.length, total);
-          setProgressStatus(`⚡ Lot ${i + 1}–${endIdx} / ${total} (${cfg.model})...`);
+          setProgressStatus(`⚡ ${isFreeMode ? "Mode gratuit" : "Lot"} ${i + 1}–${endIdx} / ${total} (${cfg.model})...`);
 
           const results = await Promise.allSettled(
             batch.map(file => processSingleFile(file, rootFolderId, cfg.geminiKey, cfg.model))
@@ -1363,10 +1429,13 @@
           });
           renderLogs();
 
-          // Si erreur bloquante (clé invalide, modèle 404, etc.), arrêt immédiat
           if (fatalApiError) {
             setProgressStatus("❌ Arrêt : erreur API Gemini (voir Journal ci-dessous)");
             break;
+          }
+
+          if (isFreeMode && !state.isPaused && i + batchSize < total) {
+            await sleep(5000);
           }
         }
 
@@ -1390,7 +1459,7 @@
       state.isPaused = true;
       const btn = document.getElementById("pauseBtn");
       btn.disabled = true;
-      btn.textContent = "⏳ Fin du lot en cours...";
+      btn.textContent = "⏳ Fin en cours...";
     }
 
     function updateControlButtons() {
@@ -1418,7 +1487,7 @@
     }
 
     // =====================================================================
-    // UI STATS & JOURNAL (INCLUANT LES ERREURS)
+    // UI STATS & JOURNAL
     // =====================================================================
     function setProgressStatus(msg) {
       document.getElementById("progressStatus").textContent = msg;
@@ -1454,45 +1523,4 @@
           <div class="log-top"><span>❌ Échec : ${escapeHtml(err.originalName)}</span></div>
           <div class="log-sub">${escapeHtml(err.message)}</div>
         </div>
-      `).join("");
-
-      const entries = Object.values(state.processedMap)
-        .sort((a, b) => new Date(b.processedAt) - new Date(a.processedAt))
-        .slice(0, 120);
-
-      if (!errHtml && entries.length === 0) {
-        list.innerHTML = `<div class="hint">Aucun fichier traité pour le moment.</div>`;
-        return;
-      }
-
-      const okHtml = entries.map(e => {
-        const cls = e.status === "ok" ? "ok" : "check";
-        const icon = e.status === "ok" ? "✅" : "⚠️";
-        const link = e.webViewLink ? `<a href="${escapeHtml(e.webViewLink)}" target="_blank" rel="noopener">Ouvrir ↗</a>` : "";
-        const src = e.sourcePath ? `${e.sourcePath}/` : "";
-        return `
-          <div class="log-item ${cls}">
-            <div class="log-top">
-              <span>${icon} ${escapeHtml(e.targetFolder)} / ${escapeHtml(e.targetName)}</span>
-              ${link}
-            </div>
-            <div class="log-sub">${escapeHtml(src + e.originalName)} • ${e.rotationDeg}°</div>
-          </div>
-        `;
-      }).join("");
-
-      list.innerHTML = errHtml + okHtml;
-    }
-
-    function escapeHtml(str) {
-      return String(str || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-    }
-
-    const sleep = ms => new Promise(r => setTimeout(r, ms));
-  </script>
-</body>
-</html>
+      `)
