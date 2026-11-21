@@ -311,7 +311,7 @@
         </div>
 
         <div class="hint">
-          Format : <strong>04-06_au_07_2026_Nuit_Releve-Nepotu.jpg</strong> / <strong>04-06_2026_Jour_Releve-Chef-de-poste-Nicolas.jpg</strong> / <strong>Releve-Inconnu</strong>.
+          Format : <strong>04-06_au_07_2026_Nuit_Releve-Nepotu.jpg</strong> / <strong>04-06_2026_Jour_Releve-Chef-de-poste-Nicolas.jpg</strong> / <strong>Releve-Inconnu</strong> (année récupérée sur la fiche relève si absente).
         </div>
 
         <div class="btn-row">
@@ -804,7 +804,6 @@
       if (state.uploadedIds[file.id]) return false;
 
       const name = file.name || "";
-      // Ignore les fichiers déjà renommés (nouveau et anciens formats)
       if (/^\d{2}-\d{2}(?:_au_(?:\d{2}-)?\d{2})?(?:_\d{4})?_\d{4}_.+\.jpg$/i.test(name)) return false;
       if (/^\d{2}-\d{2}_(?:au_(?:\d{2}-)?\d{2}_)?\d{4}_.+\.jpg$/i.test(name)) return false;
       if (/^\d{2}-\d{2}-\d{4} - [^/]+\.jpg$/i.test(name)) return false;
@@ -1074,7 +1073,7 @@
     }
 
     // =====================================================================
-    // GEMINI API (DATES DÉBUT/FIN + JOUR/NUIT + RELÈVE / CHEF DE POSTE NICOLAS)
+    // GEMINI API (ANNÉE DÉDUITE DE LA FICHE RELÈVE SI OUBLIÉE)
     // =====================================================================
     function getThinkingConfig(model) {
       if (model.includes("2.5")) return { thinkingConfig: { thinkingBudget: 0 } };
@@ -1125,11 +1124,11 @@
 
 2) LISIBILITÉ :
 - is_logbook : true si c'est une main courante de sécurité, false sinon.
-- is_readable : true si la DATE de début complète (jour, mois, année) est lisible et non coupée (même si le nom de la relève est absent/inconnu, garde is_readable = true). Mets is_readable = false uniquement si l'image est trop floue, hors sujet, ou si la date/l'année est coupée ou illisible, avec la raison courte dans doubt_reason.
+- is_readable : true si le jour, le mois ET l'année (trouvée sur sa vacation OU récupérée sur la fiche/vacation de la relève sur la même photo) sont disponibles (même si le nom de relève est absent/inconnu, garde is_readable = true). Mets is_readable = false uniquement si la photo est floue, hors sujet, ou si le jour, le mois ou l'année sont introuvables partout sur l'image.
 
-3) VACATION & DATES (en France, les dates manuscrites sont JJ/MM/AAAA) :
-- Si une double page montre deux vacations, cible uniquement celle de Guillaume BEDOUET.
-- start_day (1..31), start_month (1..12), start_year (4 chiffres ex: 2026) : date de début de la vacation.
+3) VACATION & DATES (en France, les dates manuscrites sont JJ/MM/AAAA ou JJ/MM/AA) :
+- Si une double page montre deux vacations, cible la vacation de Guillaume BEDOUET pour start_day, start_month et shift_type.
+- RÈGLE CRUCIALE POUR L'ANNÉE (start_year) : Il arrive souvent que Guillaume BEDOUET ait noté uniquement JJ/MM sans l'année. Si l'année manque sur sa vacation, REGARDE LA FICHE / VACATION DE LA RELÈVE (avant ou après lui sur la même photo ou double page) ou toute autre date présente sur l'image : FIE-TOI À L'ANNÉE ÉCRITE SUR LA FICHE DE LA RELÈVE pour remplir start_year en 4 chiffres (ex: 2025, ou /25 -> 2025, /26 -> 2026). (Uniquement si Guillaume est le 31/12 et la relève du lendemain est 01/01/2026, alors Guillaume est en 2025 ; si la relève de la veille est 31/12/2025 et Guillaume le 01/01, Guillaume est en 2026).
 - end_day, end_month, end_year : date de fin si la vacation est de nuit ou à cheval sur 2 jours (ex: du 06 au 07/04/2026 -> start_day=6, end_day=7). Pour une vacation de Jour sur une seule journée, mets end_day=0, end_month=0, end_year=0.
 - shift_type : "Jour", "Nuit", "Jour-et-Nuit", ou "Inconnu".
 
@@ -1237,6 +1236,11 @@
         .replace(/\s+/g, "-");
     }
 
+    function normalizeYear(y) {
+      if (Number.isInteger(y) && y >= 20 && y <= 30) return 2000 + y;
+      return y;
+    }
+
     function isValidDate(y, m, d) {
       if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return false;
       if (y < 2020 || y > 2030 || m < 1 || m > 12 || d < 1 || d > 31) return false;
@@ -1245,18 +1249,16 @@
     }
 
     function buildDateSegment(analysis) {
-      const sy = analysis.start_year;
+      const sy = normalizeYear(analysis.start_year);
       const sm = analysis.start_month;
       const sd = analysis.start_day;
 
-      let ey = analysis.end_year;
+      let ey = normalizeYear(analysis.end_year);
       let em = analysis.end_month;
       let ed = analysis.end_day;
 
-      // Si vacation de Nuit et date de fin non fournie, on calcule le lendemain
       let hasEnd = isValidDate(ey, em, ed) && (ey !== sy || em !== sm || ed !== sd);
       if (!hasEnd && (analysis.shift_type === "Nuit" || analysis.shift_type === "Jour-et-Nuit")) {
-        // Si Gemini n'a donné que end_day dans le même mois (ex: end_month=0)
         if (ed >= 1 && ed <= 31 && ed !== sd && isValidDate(sy, sm, ed)) {
           ey = sy; em = sm; hasEnd = true;
         } else {
@@ -1300,10 +1302,12 @@
     }
 
     function buildClassification(analysis, originalLabel) {
-      const startDateOk = isValidDate(analysis.start_year, analysis.start_month, analysis.start_day);
+      const startYear = normalizeYear(analysis.start_year);
+      const normalized = { ...analysis, start_year: startYear };
+      const startDateOk = isValidDate(startYear, analysis.start_month, analysis.start_day);
 
       if (analysis.is_logbook && analysis.is_readable && startDateOk) {
-        const datePart = buildDateSegment(analysis);
+        const datePart = buildDateSegment(normalized);
         const shiftPart = ["Jour", "Nuit", "Jour-et-Nuit"].includes(analysis.shift_type)
           ? analysis.shift_type
           : "Vacation-Inconnue";
@@ -1311,7 +1315,7 @@
 
         return {
           status: "ok",
-          targetFolderName: String(analysis.start_year),
+          targetFolderName: String(startYear),
           desiredFilename: `${datePart}_${shiftPart}_${reliefPart}.jpg`,
           reason: ""
         };
