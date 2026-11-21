@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Tri Mains Courantes — Prud'hommes (Relèves)</title>
+  <title>Tri Mains Courantes — Prud'hommes</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
@@ -269,7 +269,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>⚡ Tri Prud'hommes (Relèves)</h1>
+      <h1>⚡ Tri Prud'hommes (JPG & PDF)</h1>
       <span id="authBadge" class="badge">⚪ Non connecté</span>
     </header>
 
@@ -311,7 +311,7 @@
         </div>
 
         <div class="hint">
-          Format généré : <strong>septembre 08 2025 relève Paladi nuit.jpg</strong> (dans le dossier de l'année, ou <strong>À vérifier</strong>).
+          Format : <strong>04-06_au_07_2026_Nuit_Releve-Nepotu.jpg</strong> / <strong>04-06_2026_Jour_Releve-Chef-de-poste-Nicolas.jpg</strong> / <strong>Releve-Inconnu</strong>.
         </div>
 
         <div class="btn-row">
@@ -415,11 +415,6 @@
     const THUMB_QUALITY = 0.6;
     const EXPORT_MAX_PX = 2000;
     const EXPORT_QUALITY = 0.85;
-
-    const MONTHS_FR = [
-      "", "janvier", "février", "mars", "avril", "mai", "juin",
-      "juillet", "août", "septembre", "octobre", "novembre", "décembre"
-    ];
 
     const STORAGE_KEYS = {
       config: "mc_sorter_config_v1",
@@ -809,6 +804,9 @@
       if (state.uploadedIds[file.id]) return false;
 
       const name = file.name || "";
+      // Ignore les fichiers déjà renommés (nouveau et anciens formats)
+      if (/^\d{2}-\d{2}(?:_au_(?:\d{2}-)?\d{2})?(?:_\d{4})?_\d{4}_.+\.jpg$/i.test(name)) return false;
+      if (/^\d{2}-\d{2}_(?:au_(?:\d{2}-)?\d{2}_)?\d{4}_.+\.jpg$/i.test(name)) return false;
       if (/^\d{2}-\d{2}-\d{4} - [^/]+\.jpg$/i.test(name)) return false;
       if (/^(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre) \d{2} \d{4} relève .+\.jpg$/i.test(name)) return false;
 
@@ -1076,7 +1074,7 @@
     }
 
     // =====================================================================
-    // GEMINI API (EXTRACTION DATE + RELÈVES + JOUR/NUIT)
+    // GEMINI API (DATES DÉBUT/FIN + JOUR/NUIT + RELÈVE / CHEF DE POSTE NICOLAS)
     // =====================================================================
     function getThinkingConfig(model) {
       if (model.includes("2.5")) return { thinkingConfig: { thinkingBudget: 0 } };
@@ -1094,11 +1092,15 @@
         start_day: { type: "INTEGER" },
         start_month: { type: "INTEGER" },
         start_year: { type: "INTEGER" },
-        relief_names: { type: "STRING" },
+        end_day: { type: "INTEGER" },
+        end_month: { type: "INTEGER" },
+        end_year: { type: "INTEGER" },
         shift_type: {
           type: "STRING",
-          enum: ["jour", "nuit", "jour et nuit", "inconnu"]
-        }
+          enum: ["Jour", "Nuit", "Jour-et-Nuit", "Inconnu"]
+        },
+        is_chief_nicolas_relief: { type: "BOOLEAN" },
+        relief_surname: { type: "STRING" }
       },
       required: [
         "is_logbook",
@@ -1108,23 +1110,34 @@
         "start_day",
         "start_month",
         "start_year",
-        "relief_names",
-        "shift_type"
+        "end_day",
+        "end_month",
+        "end_year",
+        "shift_type",
+        "is_chief_nicolas_relief",
+        "relief_surname"
       ]
     };
 
-    const GEMINI_PROMPT = `Analyse cette photo/page de main courante manuscrite de sécurité en France.
+    const GEMINI_PROMPT = `Analyse cette photo/page de main courante manuscrite de sécurité en France pour l'agent Guillaume BEDOUET.
 
 1) ROTATION (rotation_clockwise_deg) : angle horaire exact (0, 90, 180, 270, ou angle précis si penchée) pour remettre le texte parfaitement horizontal et à l'endroit dans le sens de lecture.
 
 2) LISIBILITÉ :
 - is_logbook : true si c'est une main courante de sécurité, false sinon.
-- is_readable : true si la DATE complète (jour, mois, année) ET le(s) NOM(s) de relève sont lisibles et non coupés. Sinon false avec une courte raison en français dans doubt_reason (ex: "Date coupée", "Année manquante", "Relève illisible", "Image floue", "Pas une main courante").
+- is_readable : true si la DATE de début complète (jour, mois, année) est lisible et non coupée (même si le nom de la relève est absent/inconnu, garde is_readable = true). Mets is_readable = false uniquement si l'image est trop floue, hors sujet, ou si la date/l'année est coupée ou illisible, avec la raison courte dans doubt_reason.
 
-3) INFORMATIONS À EXTRAIRE :
-- DATE (attention format français JJ/MM/AAAA) : start_day (1..31), start_month (1..12), start_year (4 chiffres ex: 2025). Si double page, cibler la vacation de Guillaume BEDOUET si visible.
-- RELÈVES (relief_names) : uniquement le(s) nom(s) de famille du ou des agents qui font la relève (avant et/ou après), séparés par " - " s'il y en a deux (ex: "Paladi" ou "Dupont - Paladi"). Si un seul nom figure sur la page, mettre ce nom de famille. Chaîne vide si illisible.
-- VACATION (shift_type) : "jour", "nuit", "jour et nuit", ou "inconnu".`;
+3) VACATION & DATES (en France, les dates manuscrites sont JJ/MM/AAAA) :
+- Si une double page montre deux vacations, cible uniquement celle de Guillaume BEDOUET.
+- start_day (1..31), start_month (1..12), start_year (4 chiffres ex: 2026) : date de début de la vacation.
+- end_day, end_month, end_year : date de fin si la vacation est de nuit ou à cheval sur 2 jours (ex: du 06 au 07/04/2026 -> start_day=6, end_day=7). Pour une vacation de Jour sur une seule journée, mets end_day=0, end_month=0, end_year=0.
+- shift_type : "Jour", "Nuit", "Jour-et-Nuit", ou "Inconnu".
+
+4) RELÈVE (is_chief_nicolas_relief et relief_surname) :
+- La relève peut être soit l'agent qui assure la relève après mon service, soit l'agent relevé avant ma prise de service. Ne jamais mettre Guillaume BEDOUET lui-même.
+- Si c'est le chef de poste (noté "chef de poste", "CDP", ou "Nicolas") qui fait la relève, mets is_chief_nicolas_relief = true et relief_surname = "".
+- Sinon, mets is_chief_nicolas_relief = false et extrais uniquement le NOM DE FAMILLE de l'agent de relève (ex: "Nepotu").
+- En cas de doute, d'écriture illisible ou d'absence de mention de relève, laisse is_chief_nicolas_relief = false et relief_surname = "" (ne devine jamais).`;
 
     function parseRetryDelayMs(errJson, rawText) {
       try {
@@ -1179,7 +1192,6 @@
         try { errJson = JSON.parse(errText); } catch {}
         const cleanMsg = errJson?.error?.message || errText;
 
-        // Si quota à 0, inutile d'attendre : arrêt immédiat avec message clair
         if (/limit:\s*0\b/i.test(cleanMsg)) {
           const err = new Error(`Quota Gemini à 0 (limit: 0). Activez la facturation sur aistudio.google.com ou créez une clé avec quota actif. Détail : ${cleanMsg}`);
           err.isFatalApi = true;
@@ -1200,25 +1212,29 @@
     }
 
     // =====================================================================
-    // NOMMAGE : "septembre 08 2025 relève [Nom] [jour/nuit].jpg"
+    // NOMMAGE EXACT :
+    //   Nuit : 04-06_au_07_2026_Nuit_Releve-Nepotu.jpg
+    //   Jour : 04-06_2026_Jour_Releve-Nepotu.jpg
+    //   CDP  : ..._Releve-Chef-de-poste-Nicolas.jpg
+    //   Doute: ..._Releve-Inconnu.jpg
     // =====================================================================
+    const pad2 = n => String(n).padStart(2, "0");
+
     function sanitizePart(str) {
       return (str || "").replace(/[\/\\:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
     }
 
-    function formatReliefNames(raw) {
+    function stripAccents(str) {
+      return (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function formatSurnameForFilename(raw) {
       const cleaned = sanitizePart(raw);
       if (!cleaned) return "";
       return cleaned
-        .split(/\s*[,;/]\s*|\s+-\s+/)
-        .map(part =>
-          part
-            .trim()
-            .toLowerCase()
-            .replace(/(^|[\s-])([a-zàâäéèêëîïôöùûüç])/g, (m, sep, ch) => sep + ch.toUpperCase())
-        )
-        .filter(Boolean)
-        .join(" - ");
+        .toLowerCase()
+        .replace(/(^|[\s-])([a-zàâäéèêëîïôöùûüç])/g, (m, sep, ch) => sep + ch.toUpperCase())
+        .replace(/\s+/g, "-");
     }
 
     function isValidDate(y, m, d) {
@@ -1228,22 +1244,75 @@
       return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
     }
 
-    function buildClassification(analysis, originalLabel) {
-      const reliefs = formatReliefNames(analysis.relief_names);
-      const dateOk = isValidDate(analysis.start_year, analysis.start_month, analysis.start_day);
+    function buildDateSegment(analysis) {
+      const sy = analysis.start_year;
+      const sm = analysis.start_month;
+      const sd = analysis.start_day;
 
-      if (analysis.is_logbook && analysis.is_readable && dateOk && reliefs.length > 0) {
-        const monthWord = MONTHS_FR[analysis.start_month];
-        const jj = String(analysis.start_day).padStart(2, "0");
-        const aaaa = String(analysis.start_year);
-        const shift = ["jour", "nuit", "jour et nuit"].includes(analysis.shift_type)
-          ? ` ${analysis.shift_type}`
-          : "";
+      let ey = analysis.end_year;
+      let em = analysis.end_month;
+      let ed = analysis.end_day;
+
+      // Si vacation de Nuit et date de fin non fournie, on calcule le lendemain
+      let hasEnd = isValidDate(ey, em, ed) && (ey !== sy || em !== sm || ed !== sd);
+      if (!hasEnd && (analysis.shift_type === "Nuit" || analysis.shift_type === "Jour-et-Nuit")) {
+        // Si Gemini n'a donné que end_day dans le même mois (ex: end_month=0)
+        if (ed >= 1 && ed <= 31 && ed !== sd && isValidDate(sy, sm, ed)) {
+          ey = sy; em = sm; hasEnd = true;
+        } else {
+          const next = new Date(Date.UTC(sy, sm - 1, sd + 1));
+          ey = next.getUTCFullYear();
+          em = next.getUTCMonth() + 1;
+          ed = next.getUTCDate();
+          hasEnd = true;
+        }
+      }
+
+      if (!hasEnd) {
+        return `${pad2(sm)}-${pad2(sd)}_${sy}`;
+      }
+      if (ey === sy && em === sm) {
+        return `${pad2(sm)}-${pad2(sd)}_au_${pad2(ed)}_${sy}`;
+      }
+      if (ey === sy) {
+        return `${pad2(sm)}-${pad2(sd)}_au_${pad2(em)}-${pad2(ed)}_${sy}`;
+      }
+      return `${pad2(sm)}-${pad2(sd)}_${sy}_au_${pad2(em)}-${pad2(ed)}_${ey}`;
+    }
+
+    function buildReliefSegment(analysis) {
+      if (analysis.is_chief_nicolas_relief === true) {
+        return "Releve-Chef-de-poste-Nicolas";
+      }
+
+      const raw = sanitizePart(analysis.relief_surname);
+      const low = stripAccents(raw).toLowerCase();
+
+      if (!raw || low === "inconnu" || low === "inconnue" || low.includes("bedouet") || low === "guillaume") {
+        return "Releve-Inconnu";
+      }
+      if (low.includes("chef de poste") || low === "cdp" || /\bcdp\b/.test(low) || low === "nicolas") {
+        return "Releve-Chef-de-poste-Nicolas";
+      }
+
+      const formatted = formatSurnameForFilename(raw);
+      return formatted ? `Releve-${formatted}` : "Releve-Inconnu";
+    }
+
+    function buildClassification(analysis, originalLabel) {
+      const startDateOk = isValidDate(analysis.start_year, analysis.start_month, analysis.start_day);
+
+      if (analysis.is_logbook && analysis.is_readable && startDateOk) {
+        const datePart = buildDateSegment(analysis);
+        const shiftPart = ["Jour", "Nuit", "Jour-et-Nuit"].includes(analysis.shift_type)
+          ? analysis.shift_type
+          : "Vacation-Inconnue";
+        const reliefPart = buildReliefSegment(analysis);
 
         return {
           status: "ok",
-          targetFolderName: aaaa,
-          desiredFilename: `${monthWord} ${jj} ${aaaa} relève ${reliefs}${shift}.jpg`,
+          targetFolderName: String(analysis.start_year),
+          desiredFilename: `${datePart}_${shiftPart}_${reliefPart}.jpg`,
           reason: ""
         };
       }
@@ -1251,8 +1320,7 @@
       let reason = sanitizePart(analysis.doubt_reason);
       if (!reason) {
         if (!analysis.is_logbook) reason = "Pas une main courante";
-        else if (!dateOk) reason = "Date illisible";
-        else if (!reliefs) reason = "Relève illisible";
+        else if (!startDateOk) reason = "Date illisible";
         else reason = "À vérifier";
       }
 
@@ -1523,4 +1591,45 @@
           <div class="log-top"><span>❌ Échec : ${escapeHtml(err.originalName)}</span></div>
           <div class="log-sub">${escapeHtml(err.message)}</div>
         </div>
-      `)
+      `).join("");
+
+      const entries = Object.values(state.processedMap)
+        .sort((a, b) => new Date(b.processedAt) - new Date(a.processedAt))
+        .slice(0, 120);
+
+      if (!errHtml && entries.length === 0) {
+        list.innerHTML = `<div class="hint">Aucun fichier traité pour le moment.</div>`;
+        return;
+      }
+
+      const okHtml = entries.map(e => {
+        const cls = e.status === "ok" ? "ok" : "check";
+        const icon = e.status === "ok" ? "✅" : "⚠️";
+        const link = e.webViewLink ? `<a href="${escapeHtml(e.webViewLink)}" target="_blank" rel="noopener">Ouvrir ↗</a>` : "";
+        const src = e.sourcePath ? `${e.sourcePath}/` : "";
+        return `
+          <div class="log-item ${cls}">
+            <div class="log-top">
+              <span>${icon} ${escapeHtml(e.targetFolder)} / ${escapeHtml(e.targetName)}</span>
+              ${link}
+            </div>
+            <div class="log-sub">${escapeHtml(src + e.originalName)} • ${e.rotationDeg}°</div>
+          </div>
+        `;
+      }).join("");
+
+      list.innerHTML = errHtml + okHtml;
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+  </script>
+</body>
+</html>
