@@ -100,7 +100,7 @@
       font-weight: 600;
     }
 
-    input {
+    input, select {
       width: 100%;
       padding: 10px 12px;
       border-radius: 10px;
@@ -110,7 +110,7 @@
       font-size: 0.9rem;
       outline: none;
     }
-    input:focus { border-color: var(--primary); }
+    input:focus, select:focus { border-color: var(--primary); }
 
     .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -276,7 +276,7 @@
     <!-- 1. CONNEXION -->
     <section class="card">
       <div class="card-header" onclick="document.getElementById('configBody').classList.toggle('hidden')">
-        <h2 class="card-title">⚙️ Connexion Google & Gemini 2.5 Flash</h2>
+        <h2 class="card-title">⚙️ Connexion Google & Gemini</h2>
         <span class="badge">Afficher / Masquer</span>
       </div>
 
@@ -292,15 +292,22 @@
           </label>
         </div>
 
-        <div class="hint">
-          Scan récursif de <strong>tous les sous-dossiers</strong> (.jpg, .jpeg, .png, .pdf) • <strong>gemini-2.5-flash</strong> (thinkingBudget: 0) • Export <strong>MM-JJ-AAAA - [Nom].jpg</strong>.
-        </div>
+        <label>
+          Modèle Gemini
+          <select id="modelSelect">
+            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Le plus rapide — Recommandé)</option>
+            <option value="gemini-3.8-flash">gemini-3.8-flash (Très haute précision)</option>
+            <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Ancien modèle)</option>
+          </select>
+        </label>
 
         <div class="btn-row">
           <button class="btn-ghost" onclick="saveConfig()">💾 Sauvegarder</button>
+          <button id="testGeminiBtn" class="btn-ghost" onclick="testGeminiKey()">🧪 Tester Gemini</button>
           <button id="connectBtn" class="btn-primary btn-grow" onclick="connectGoogle(true)">🔐 Connexion Google Drive</button>
           <button id="disconnectBtn" class="btn-ghost hidden" onclick="disconnectGoogle()">Déconnexion</button>
         </div>
+        <div id="geminiStatusHint" class="hint hidden"></div>
       </div>
     </section>
 
@@ -356,7 +363,7 @@
     <!-- 4. JOURNAL -->
     <section class="card">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2 class="card-title">📜 Journal</h2>
+        <h2 class="card-title">📜 Journal (succès & erreurs)</h2>
         <span id="historyInfo" style="font-size:0.78rem; color:var(--muted);">0 en mémoire</span>
       </div>
       <div id="logList" class="log-list">
@@ -382,7 +389,6 @@
   </div>
 
   <script>
-    // Configuration du worker PDF.js
     if (window.pdfjsLib) {
       pdfjsLib.GlobalWorkerOptions.workerSrc =
         "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -392,7 +398,6 @@
     // CONSTANTES & ÉTAT
     // =====================================================================
     const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
-    const GEMINI_MODEL = "gemini-2.5-flash";
     const BATCH_SIZE = 5;
     const THUMB_MAX_PX = 1000;
     const THUMB_QUALITY = 0.6;
@@ -401,7 +406,7 @@
 
     const STORAGE_KEYS = {
       config: "mc_sorter_config_v1",
-      folder: "mc_sorter_folder_v2", // v2 pour basculer automatiquement sur Prud'hommes
+      folder: "mc_sorter_folder_v2",
       processed: "mc_sorter_processed_v1",
       uploaded: "mc_sorter_uploaded_v1"
     };
@@ -418,9 +423,10 @@
       folderFilesCache: {},
       folderFilesInFlight: {},
 
-      sourceFiles: [],      // Tous les JPG/PNG/PDF trouvés récursivement
-      processedMap: {},     // { [sourceFileId]: { ... } }
-      uploadedIds: {},      // { [createdFileId]: true } pour ne jamais rescanner nos sorties
+      sourceFiles: [],
+      processedMap: {},
+      uploadedIds: {},
+      recentErrors: [], // Erreurs visibles dans le journal sans polluer processedMap
 
       isRunning: false,
       isPaused: false
@@ -448,13 +454,18 @@
         const cfg = JSON.parse(raw);
         if (cfg.clientId) document.getElementById("clientIdInput").value = cfg.clientId;
         if (cfg.geminiKey) document.getElementById("geminiKeyInput").value = cfg.geminiKey;
+        const sel = document.getElementById("modelSelect");
+        if (cfg.model && [...sel.options].some(o => o.value === cfg.model)) {
+          sel.value = cfg.model;
+        }
       } catch (e) {}
     }
 
     function saveConfig(silent = false) {
       const cfg = {
         clientId: document.getElementById("clientIdInput").value.trim(),
-        geminiKey: document.getElementById("geminiKeyInput").value.trim()
+        geminiKey: document.getElementById("geminiKeyInput").value.trim(),
+        model: document.getElementById("modelSelect").value
       };
       localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(cfg));
       if (!silent) alert("Configuration sauvegardée.");
@@ -496,9 +507,50 @@
     function clearProcessedHistory() {
       if (!confirm("Effacer l'historique local des fichiers déjà traités ? (Aucun fichier Drive ne sera supprimé.)")) return;
       state.processedMap = {};
+      state.recentErrors = [];
       saveProcessedMap();
       renderStats();
       renderLogs();
+    }
+
+    // =====================================================================
+    // TEST RAPIDE CLÉ GEMINI
+    // =====================================================================
+    async function testGeminiKey() {
+      const cfg = saveConfig(true);
+      const hint = document.getElementById("geminiStatusHint");
+      hint.classList.remove("hidden");
+
+      if (!cfg.geminiKey) {
+        hint.textContent = "❌ Veuillez coller votre clé API Gemini d'abord.";
+        return;
+      }
+
+      hint.textContent = `⏳ Test de ${cfg.model} en cours...`;
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`;
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": cfg.geminiKey
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: "Réponds uniquement OK" }] }],
+            generationConfig: getThinkingConfig(cfg.model)
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          const msg = data?.error?.message || JSON.stringify(data);
+          hint.textContent = `❌ Erreur Gemini (${res.status}) : ${msg}`;
+          return;
+        }
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "OK";
+        hint.textContent = `🟢 Gemini prêt (${cfg.model}) : "${reply.trim()}"`;
+      } catch (err) {
+        hint.textContent = `❌ Erreur réseau Gemini : ${err.message}`;
+      }
     }
 
     // =====================================================================
@@ -653,14 +705,12 @@
           "files(id,name,parents)"
         );
 
-        // Priorité : dossier nommé "Prud'hommes" / "Prudhomme" à la racine de Mon Drive
         const matches = allFolders.filter(f => {
           const n = normalizeFolderName(f.name);
           return n.includes("prud'homme") || n.includes("prudhomme");
         });
 
         if (matches.length > 0) {
-          // Préfère celui dont le nom est le plus court / exact
           matches.sort((a, b) => a.name.length - b.name.length);
           const target = matches[0];
           setSelectedFolder(target.id, target.name, "Mon Drive / " + target.name);
@@ -733,13 +783,11 @@
     }
 
     // =====================================================================
-    // SCAN RÉCURSIF DE TOUS LES SOUS-DOSSIERS (JPG, JPEG, PNG, PDF)
+    // SCAN RÉCURSIF (JPG, JPEG, PNG, PDF)
     // =====================================================================
     function isSupportedSourceFile(file) {
       const mime = (file.mimeType || "").toLowerCase();
       if (mime.startsWith("application/vnd.google-apps.")) return false;
-
-      // Ignore les fichiers déjà produits par l'application
       if (file.appProperties?.mcSorted === "1") return false;
       if (state.uploadedIds[file.id]) return false;
       if (/^\d{2}-\d{2}-\d{4} - [^/]+\.jpg$/i.test(file.name || "")) return false;
@@ -773,7 +821,6 @@
 
           for (const item of children) {
             if (item.mimeType === "application/vnd.google-apps.folder") {
-              // Ne pas entrer dans "À vérifier"
               if (item.name === "À vérifier") continue;
               if (!visitedFolders.has(item.id)) {
                 visitedFolders.add(item.id);
@@ -788,7 +835,7 @@
             }
           }
 
-          setProgressStatus(`🔍 ${scannedFolderCount} dossier(s) scanné(s) — ${foundFiles.length} fichier(s) JPG/PDF trouvé(s)...`);
+          setProgressStatus(`🔍 ${scannedFolderCount} dossier(s) — ${foundFiles.length} fichier(s) JPG/PDF trouvé(s)...`);
         }
 
         foundFiles.sort((a, b) => (a.folderPath + "/" + a.name).localeCompare(b.folderPath + "/" + b.name, "fr"));
@@ -917,23 +964,45 @@
     }
 
     // =====================================================================
-    // RENDU IMAGE / PDF + MINIATURE 1000px + EXPORT 2000px JPEG 0.85
+    // DÉCODAGE & CANVAS (1000px / 0.6 -> GEMINI, 2000px / 0.85 -> DRIVE)
     // =====================================================================
-    function canvasToThumbBase64(sourceCanvasOrBitmap, srcW, srcH) {
+    async function decodeImageBlob(blob) {
+      try {
+        const bmp = await createImageBitmap(blob);
+        return { source: bmp, width: bmp.width, height: bmp.height, close: () => bmp.close() };
+      } catch {
+        // Secours via <img> si createImageBitmap échoue sur un JPEG particulier
+        const url = URL.createObjectURL(blob);
+        const img = await new Promise((resolve, reject) => {
+          const el = new Image();
+          el.onload = () => resolve(el);
+          el.onerror = () => reject(new Error("Image illisible ou corrompue"));
+          el.src = url;
+        });
+        return {
+          source: img,
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+          close: () => URL.revokeObjectURL(url)
+        };
+      }
+    }
+
+    function canvasToThumbBase64(source, srcW, srcH) {
       const scale = Math.min(1, THUMB_MAX_PX / Math.max(srcW, srcH));
       const w = Math.max(1, Math.round(srcW * scale));
       const h = Math.max(1, Math.round(srcH * scale));
       const canvas = document.createElement("canvas");
       canvas.width = w;
       canvas.height = h;
-      canvas.getContext("2d").drawImage(sourceCanvasOrBitmap, 0, 0, w, h);
+      canvas.getContext("2d").drawImage(source, 0, 0, w, h);
       const b64 = canvas.toDataURL("image/jpeg", THUMB_QUALITY).split(",")[1];
       canvas.width = 0;
       canvas.height = 0;
       return b64;
     }
 
-    async function rotateAndExportJpeg(sourceCanvasOrBitmap, srcW, srcH, clockwiseDeg) {
+    async function rotateAndExportJpeg(source, srcW, srcH, clockwiseDeg) {
       const scale = Math.min(1, EXPORT_MAX_PX / Math.max(srcW, srcH));
       let w = Math.max(1, Math.round(srcW * scale));
       let h = Math.max(1, Math.round(srcH * scale));
@@ -946,19 +1015,19 @@
 
       if (isNear(norm, 0) || isNear(norm, 360)) {
         canvas.width = w; canvas.height = h;
-        ctx.drawImage(sourceCanvasOrBitmap, 0, 0, w, h);
+        ctx.drawImage(source, 0, 0, w, h);
       } else if (isNear(norm, 90)) {
         canvas.width = h; canvas.height = w;
         ctx.translate(h, 0); ctx.rotate(Math.PI / 2);
-        ctx.drawImage(sourceCanvasOrBitmap, 0, 0, w, h);
+        ctx.drawImage(source, 0, 0, w, h);
       } else if (isNear(norm, 180)) {
         canvas.width = w; canvas.height = h;
         ctx.translate(w, h); ctx.rotate(Math.PI);
-        ctx.drawImage(sourceCanvasOrBitmap, 0, 0, w, h);
+        ctx.drawImage(source, 0, 0, w, h);
       } else if (isNear(norm, 270)) {
         canvas.width = h; canvas.height = w;
         ctx.translate(0, w); ctx.rotate(-Math.PI / 2);
-        ctx.drawImage(sourceCanvasOrBitmap, 0, 0, w, h);
+        ctx.drawImage(source, 0, 0, w, h);
       } else {
         const rad = (norm * Math.PI) / 180;
         const cos = Math.abs(Math.cos(rad));
@@ -976,7 +1045,7 @@
         ctx.fillRect(0, 0, outW, outH);
         ctx.translate(outW / 2, outH / 2);
         ctx.rotate(rad);
-        ctx.drawImage(sourceCanvasOrBitmap, -w / 2, -h / 2, w, h);
+        ctx.drawImage(source, -w / 2, -h / 2, w, h);
       }
 
       const outBlob = await new Promise((resolve, reject) => {
@@ -988,8 +1057,14 @@
     }
 
     // =====================================================================
-    // GEMINI 2.5 FLASH (THINKINGBUDGET: 0 — 2 INFOS SEULEMENT)
+    // GEMINI API (COMPATIBLE 3.5-FLASH-LITE / 3.8-FLASH / 2.5-FLASH-LITE)
     // =====================================================================
+    function getThinkingConfig(model) {
+      if (model.includes("2.5")) return { thinkingConfig: { thinkingBudget: 0 } };
+      if (model.includes("3.5-flash-lite")) return { thinkingConfig: { thinkingLevel: "minimal" } };
+      return { thinkingConfig: { thinkingLevel: "low" } };
+    }
+
     const GEMINI_SCHEMA = {
       type: "OBJECT",
       properties: {
@@ -1026,8 +1101,8 @@
 - DATE (attention format français JJ/MM/AAAA) : start_day (1..31), start_month (1..12), start_year (4 chiffres ex: 2025). Si double page, prendre la vacation de Guillaume BEDOUET si visible.
 - NOM (agent_name) : uniquement le nom de famille de l'agent qui fait la relève, OU le nom de famille de l'agent présent si un seul nom figure sur la page. Chaîne vide si illisible.`;
 
-    async function analyzeWithGemini(base64Thumb, geminiKey) {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+    async function analyzeWithGemini(base64Thumb, geminiKey, model) {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
       const payload = {
         contents: [{
           parts: [
@@ -1038,7 +1113,7 @@
         generationConfig: {
           responseMimeType: "application/json",
           responseSchema: GEMINI_SCHEMA,
-          thinkingConfig: { thinkingBudget: 0 }
+          ...getThinkingConfig(model)
         }
       };
 
@@ -1059,12 +1134,15 @@
           if (!text) throw new Error("Réponse Gemini vide.");
           return JSON.parse(text);
         }
+
         const errText = await res.text();
         if ((res.status === 429 || res.status === 503) && attempt < delays.length) {
           await sleep(delays[attempt]);
           continue;
         }
-        throw new Error(`Gemini (${res.status}): ${errText.slice(0, 180)}`);
+        const err = new Error(`Gemini (${res.status}): ${errText.slice(0, 200)}`);
+        err.isFatalApi = [400, 401, 403, 404].includes(res.status);
+        throw err;
       }
     }
 
@@ -1124,11 +1202,11 @@
     }
 
     // =====================================================================
-    // TRAITEMENT FICHIER (IMAGE OU PDF) PAR LOTS DE 5 EN PARALLÈLE
+    // TRAITEMENT FICHIER (IMAGE OU PDF) PAR LOTS DE 5
     // =====================================================================
-    async function classifyAndUploadSurface(surface, w, h, labelName, sourceFile, rootFolderId, geminiKey) {
+    async function classifyAndUploadSurface(surface, w, h, labelName, sourceFile, rootFolderId, geminiKey, model) {
       const thumbB64 = canvasToThumbBase64(surface, w, h);
-      const analysis = await analyzeWithGemini(thumbB64, geminiKey);
+      const analysis = await analyzeWithGemini(thumbB64, geminiKey, model);
       const decision = buildClassification(analysis, labelName);
       const rotatedBlob = await rotateAndExportJpeg(surface, w, h, analysis.rotation_clockwise_deg);
 
@@ -1148,12 +1226,14 @@
       };
     }
 
-    async function processSingleFile(file, rootFolderId, geminiKey) {
-      const dlRes = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
+    async function processSingleFile(file, rootFolderId, geminiKey, model) {
+      const dlRes = await driveFetch(
+        `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&supportsAllDrives=true`
+      );
       const origBlob = await dlRes.blob();
 
       if (file.isPdf) {
-        if (!window.pdfjsLib) throw new Error("PDF.js non chargé.");
+        if (!window.pdfjsLib) throw new Error("PDF.js non chargé (vérifiez votre connexion).");
         const arrayBuf = await origBlob.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
         let lastEntry = null;
@@ -1184,7 +1264,8 @@
               pageLabel,
               file,
               rootFolderId,
-              geminiKey
+              geminiKey,
+              model
             );
 
             pageCanvas.width = 0;
@@ -1208,20 +1289,21 @@
           pagesCount: pdf.numPages
         };
       } else {
-        const bitmap = await createImageBitmap(origBlob);
+        const decoded = await decodeImageBlob(origBlob);
         let entry;
         try {
           entry = await classifyAndUploadSurface(
-            bitmap,
-            bitmap.width,
-            bitmap.height,
+            decoded.source,
+            decoded.width,
+            decoded.height,
             file.name,
             file,
             rootFolderId,
-            geminiKey
+            geminiKey,
+            model
           );
         } finally {
-          bitmap.close();
+          decoded.close();
         }
         state.processedMap[file.id] = { fileId: file.id, ...entry };
       }
@@ -1241,12 +1323,14 @@
 
       state.isRunning = true;
       state.isPaused = false;
+      state.recentErrors = [];
       updateControlButtons();
+      renderLogs();
 
       const rootFolderId = state.selectedFolder.id;
       const toProcess = singleTest ? queue.slice(0, 1) : queue;
       const total = toProcess.length;
-      const errors = [];
+      let errorCount = 0;
 
       try {
         for (let i = 0; i < total; i += BATCH_SIZE) {
@@ -1257,28 +1341,41 @@
 
           const batch = toProcess.slice(i, i + BATCH_SIZE);
           const endIdx = Math.min(i + batch.length, total);
-          setProgressStatus(`⚡ Lot ${i + 1}–${endIdx} / ${total} en parallèle...`);
+          setProgressStatus(`⚡ Lot ${i + 1}–${endIdx} / ${total} (${cfg.model})...`);
 
           const results = await Promise.allSettled(
-            batch.map(file => processSingleFile(file, rootFolderId, cfg.geminiKey))
+            batch.map(file => processSingleFile(file, rootFolderId, cfg.geminiKey, cfg.model))
           );
 
+          let fatalApiError = null;
           results.forEach((res, idx) => {
             if (res.status === "rejected") {
-              errors.push(`${batch[idx].name} : ${res.reason?.message || res.reason}`);
+              errorCount++;
+              const errObj = res.reason;
+              const msg = errObj?.message || String(errObj);
+              state.recentErrors.unshift({
+                originalName: batch[idx].name,
+                message: msg,
+                processedAt: new Date().toISOString()
+              });
+              if (errObj?.isFatalApi) fatalApiError = msg;
             }
           });
+          renderLogs();
+
+          // Si erreur bloquante (clé invalide, modèle 404, etc.), arrêt immédiat
+          if (fatalApiError) {
+            setProgressStatus("❌ Arrêt : erreur API Gemini (voir Journal ci-dessous)");
+            break;
+          }
         }
 
-        if (!state.isPaused) {
+        if (!state.isPaused && !document.getElementById("progressStatus").textContent.startsWith("❌")) {
           setProgressStatus(
-            errors.length > 0
-              ? `⚠️ Terminé avec ${errors.length} erreur(s)`
+            errorCount > 0
+              ? `⚠️ Terminé avec ${errorCount} erreur(s) — voir le Journal`
               : (singleTest ? "✅ Test 1 fichier terminé !" : "✅ Tous les fichiers ont été traités !")
           );
-          if (errors.length > 0) {
-            alert("Erreurs sur certains fichiers (non marqués comme traités, vous pouvez relancer) :\n\n" + errors.slice(0, 5).join("\n"));
-          }
         }
       } finally {
         state.isRunning = false;
@@ -1321,7 +1418,7 @@
     }
 
     // =====================================================================
-    // UI STATS & JOURNAL
+    // UI STATS & JOURNAL (INCLUANT LES ERREURS)
     // =====================================================================
     function setProgressStatus(msg) {
       document.getElementById("progressStatus").textContent = msg;
@@ -1352,16 +1449,23 @@
 
     function renderLogs() {
       const list = document.getElementById("logList");
+      const errHtml = state.recentErrors.slice(0, 30).map(err => `
+        <div class="log-item err">
+          <div class="log-top"><span>❌ Échec : ${escapeHtml(err.originalName)}</span></div>
+          <div class="log-sub">${escapeHtml(err.message)}</div>
+        </div>
+      `).join("");
+
       const entries = Object.values(state.processedMap)
         .sort((a, b) => new Date(b.processedAt) - new Date(a.processedAt))
-        .slice(0, 150);
+        .slice(0, 120);
 
-      if (entries.length === 0) {
+      if (!errHtml && entries.length === 0) {
         list.innerHTML = `<div class="hint">Aucun fichier traité pour le moment.</div>`;
         return;
       }
 
-      list.innerHTML = entries.map(e => {
+      const okHtml = entries.map(e => {
         const cls = e.status === "ok" ? "ok" : "check";
         const icon = e.status === "ok" ? "✅" : "⚠️";
         const link = e.webViewLink ? `<a href="${escapeHtml(e.webViewLink)}" target="_blank" rel="noopener">Ouvrir ↗</a>` : "";
@@ -1376,6 +1480,8 @@
           </div>
         `;
       }).join("");
+
+      list.innerHTML = errHtml + okHtml;
     }
 
     function escapeHtml(str) {
