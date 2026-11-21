@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Tri Mains Courantes — Google Drive & Gemini</title>
+  <title>Tri Mains Courantes (Rapide x5)</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root {
@@ -37,25 +37,18 @@
       margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
-      padding: 4px 2px;
     }
 
-    h1 {
-      font-size: 1.2rem;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+    h1 { font-size: 1.15rem; margin: 0; }
 
     .badge {
       display: inline-flex;
@@ -80,60 +73,46 @@
       padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
 
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 8px;
       cursor: pointer;
     }
-
-    .card-title {
-      font-size: 0.98rem;
-      font-weight: 700;
-      margin: 0;
-    }
+    .card-title { font-size: 0.95rem; font-weight: 700; margin: 0; }
 
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr;
       gap: 10px;
     }
-    @media (min-width: 640px) {
-      .grid-2 { grid-template-columns: 1fr 1fr; }
-    }
+    @media (min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
 
     label {
       display: flex;
       flex-direction: column;
-      gap: 5px;
-      font-size: 0.82rem;
+      gap: 4px;
+      font-size: 0.8rem;
       color: var(--muted);
       font-weight: 600;
     }
 
-    input, select {
+    input {
       width: 100%;
-      padding: 11px 12px;
+      padding: 10px 12px;
       border-radius: 10px;
       border: 1px solid var(--border);
       background: #0b1220;
       color: var(--text);
-      font-size: 0.92rem;
+      font-size: 0.9rem;
       outline: none;
     }
-    input:focus, select:focus {
-      border-color: var(--primary);
-    }
+    input:focus { border-color: var(--primary); }
 
-    .btn-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
     button {
       appearance: none;
@@ -147,26 +126,18 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      transition: transform 0.05s ease, opacity 0.15s ease, background 0.15s ease;
       touch-action: manipulation;
     }
     button:active { transform: scale(0.98); }
     button:disabled { opacity: 0.45; cursor: not-allowed; }
 
     .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
     .btn-success { background: var(--success); color: #052e16; }
     .btn-warn { background: var(--warn); color: #451a03; }
-    .btn-danger { background: var(--danger); color: #fff; }
-    .btn-ghost {
-      background: var(--card-2);
-      color: var(--text);
-      border-color: var(--border);
-    }
-    .btn-sm { padding: 7px 10px; font-size: 0.8rem; }
+    .btn-ghost { background: var(--card-2); color: var(--text); border-color: var(--border); }
+    .btn-sm { padding: 7px 10px; font-size: 0.78rem; }
     .btn-grow { flex: 1 1 140px; }
 
-    /* Sticky mobile progress card */
     .progress-sticky {
       position: sticky;
       top: 8px;
@@ -182,18 +153,16 @@
       overflow: hidden;
       border: 1px solid var(--border);
     }
-
     .progress-fill {
       height: 100%;
       width: 0%;
       background: linear-gradient(90deg, #3b82f6, #10b981);
-      transition: width 0.25s ease;
+      transition: width 0.2s ease;
     }
 
     .progress-meta {
       display: flex;
       justify-content: space-between;
-      align-items: center;
       font-size: 0.84rem;
       gap: 8px;
       flex-wrap: wrap;
@@ -211,48 +180,26 @@
       padding: 8px 6px;
       text-align: center;
     }
-    .stat-val { font-size: 1.1rem; font-weight: 800; }
+    .stat-val { font-size: 1.05rem; font-weight: 800; }
     .stat-lbl { font-size: 0.7rem; color: var(--muted); }
-
-    .preview-box {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      background: #0b1220;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px;
-    }
-    @media (min-width: 560px) {
-      .preview-box { grid-template-columns: 160px 1fr; align-items: center; }
-    }
-    .preview-thumb {
-      width: 100%;
-      max-height: 180px;
-      object-fit: contain;
-      background: #020617;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-    }
 
     .log-list {
       display: flex;
       flex-direction: column;
       gap: 8px;
-      max-height: 420px;
+      max-height: 400px;
       overflow-y: auto;
     }
-
     .log-item {
       background: #0b1220;
       border: 1px solid var(--border);
       border-left-width: 4px;
       border-radius: 10px;
-      padding: 10px;
-      font-size: 0.84rem;
+      padding: 9px 10px;
+      font-size: 0.83rem;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
     }
     .log-item.ok { border-left-color: var(--success); }
     .log-item.check { border-left-color: var(--warn); }
@@ -261,28 +208,23 @@
     .log-top {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
       gap: 8px;
       flex-wrap: wrap;
       font-weight: 700;
     }
+    .log-sub { color: var(--muted); font-size: 0.76rem; word-break: break-word; }
 
-    .log-sub { color: var(--muted); font-size: 0.78rem; word-break: break-word; }
     a { color: #60a5fa; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
     .hint {
       font-size: 0.78rem;
       color: var(--muted);
       background: #0b1220;
       border: 1px dashed var(--border);
       border-radius: 10px;
-      padding: 10px;
+      padding: 9px 10px;
     }
-
     .hidden { display: none !important; }
 
-    /* Modal Explorateur Drive */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -315,101 +257,78 @@
     }
     .folder-row {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      gap: 8px;
       padding: 10px;
       border-radius: 10px;
       background: #0b1220;
       border: 1px solid var(--border);
       cursor: pointer;
     }
-    .folder-row:hover { border-color: var(--primary); }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>📋 Tri Mains Courantes</h1>
+      <h1>⚡ Tri Mains Courantes (x5)</h1>
       <span id="authBadge" class="badge">⚪ Non connecté</span>
     </header>
 
-    <!-- 1. CONFIGURATION & OAUTH -->
+    <!-- 1. CONNEXION -->
     <section class="card">
-      <div class="card-header" onclick="toggleConfig()">
-        <h2 class="card-title">⚙️ Connexion Google Drive & Gemini</h2>
-        <span id="configChevron" class="badge">Afficher / Masquer</span>
+      <div class="card-header" onclick="document.getElementById('configBody').classList.toggle('hidden')">
+        <h2 class="card-title">⚙️ Connexion Google & Gemini 2.5 Flash</h2>
+        <span class="badge">Afficher / Masquer</span>
       </div>
 
       <div id="configBody" style="display:flex; flex-direction:column; gap:10px;">
         <div class="grid-2">
           <label>
-            Google OAuth Client ID (Application Web)
+            Google OAuth Client ID
             <input id="clientIdInput" type="text" placeholder="123456789-xxx.apps.googleusercontent.com" autocomplete="off" />
           </label>
           <label>
-            Clé API Gemini (Google AI Studio)
+            Clé API Gemini
             <input id="geminiKeyInput" type="password" placeholder="AIzaSy..." autocomplete="off" />
           </label>
         </div>
 
-        <div class="grid-2">
-          <label>
-            Modèle Gemini
-            <select id="modelSelect">
-              <option value="gemini-4-hydrogen">gemini-4-hydrogen (Recommandé — très précis)</option>
-              <option value="gemini-3.8-flash">gemini-3.8-flash (Rapide & équilibré)</option>
-              <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Ultra économique)</option>
-            </select>
-          </label>
-          <label>
-            Qualité JPEG d'export
-            <select id="jpegQualitySelect">
-              <option value="0.92">Haute qualité (92%)</option>
-              <option value="0.85">Équilibrée mobile (85%)</option>
-            </select>
-          </label>
-        </div>
-
         <div class="hint">
-          Origine JavaScript autorisée à ajouter dans Google Cloud Console :
-          <strong id="originDisplay"></strong>
-          <button type="button" class="btn-ghost btn-sm" style="margin-left:6px;" onclick="copyOrigin()">Copier</button>
+          Mode rapide : <strong>gemini-2.5-flash</strong> (thinkingBudget: 0) • Miniature <strong>1000px (0.6)</strong> • Export <strong>2000px (0.85)</strong> • Lots de <strong>5 en parallèle</strong>.
         </div>
 
         <div class="btn-row">
-          <button id="saveConfigBtn" class="btn-ghost" onclick="saveConfig()">💾 Sauvegarder</button>
+          <button class="btn-ghost" onclick="saveConfig()">💾 Sauvegarder</button>
           <button id="connectBtn" class="btn-primary btn-grow" onclick="connectGoogle(true)">🔐 Connexion Google Drive</button>
           <button id="disconnectBtn" class="btn-ghost hidden" onclick="disconnectGoogle()">Déconnexion</button>
         </div>
       </div>
     </section>
 
-    <!-- 2. SELECTION DU DOSSIER -->
+    <!-- 2. DOSSIER -->
     <section class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-        <h2 class="card-title">📁 Dossier source Google Drive</h2>
-        <span id="folderStatusBadge" class="badge">En attente de connexion</span>
+        <h2 class="card-title">📁 Dossier Google Drive</h2>
+        <span id="folderStatusBadge" class="badge">En attente</span>
       </div>
 
-      <div id="selectedFolderBox" class="hint" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+      <div class="hint" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
         <div>
-          Dossier ciblé : <strong id="selectedFolderName">Aucun</strong>
-          <div id="selectedFolderPath" style="font-size:0.75rem; color:var(--muted);"></div>
+          Dossier : <strong id="selectedFolderName">Aucun</strong>
+          <div id="selectedFolderPath" style="font-size:0.74rem;"></div>
         </div>
         <div class="btn-row">
-          <button id="autoFindBtn" class="btn-ghost btn-sm" onclick="autoFindMainsCourantes()" disabled>🔍 Chercher "Prud'hommes / Mains courantes"</button>
-          <button id="browseDriveBtn" class="btn-ghost btn-sm" onclick="openFolderModal()" disabled>📂 Parcourir Drive</button>
+          <button id="autoFindBtn" class="btn-ghost btn-sm" onclick="autoFindMainsCourantes()" disabled>🔍 Chercher "Mains courantes"</button>
+          <button id="browseDriveBtn" class="btn-ghost btn-sm" onclick="openFolderModal()" disabled>📂 Parcourir</button>
         </div>
       </div>
 
       <div class="btn-row">
         <button id="scanBtn" class="btn-primary btn-grow" onclick="scanRootImages()" disabled>🔄 Scanner les images à la racine</button>
-        <button id="clearCacheBtn" class="btn-ghost btn-sm" onclick="clearProcessedHistory()">🗑️ Oublier l'historique local</button>
+        <button class="btn-ghost btn-sm" onclick="clearProcessedHistory()">🗑️ Effacer l'historique local</button>
       </div>
     </section>
 
-    <!-- 3. PROGRESSION STICKY (MOBILE FRIENDLY) -->
+    <!-- 3. PROGRESSION -->
     <section class="card progress-sticky">
       <div class="progress-meta">
         <strong id="progressStatus">Prêt</strong>
@@ -421,47 +340,27 @@
       </div>
 
       <div class="stats-grid">
-        <div class="stat-box">
-          <div id="statTotal" class="stat-val">0</div>
-          <div class="stat-lbl">Racine</div>
-        </div>
-        <div class="stat-box">
-          <div id="statOk" class="stat-val" style="color:var(--success);">0</div>
-          <div class="stat-lbl">Classées</div>
-        </div>
-        <div class="stat-box">
-          <div id="statCheck" class="stat-val" style="color:var(--warn);">0</div>
-          <div class="stat-lbl">À vérifier</div>
-        </div>
-        <div class="stat-box">
-          <div id="statRemaining" class="stat-val" style="color:var(--primary);">0</div>
-          <div class="stat-lbl">Restantes</div>
-        </div>
+        <div class="stat-box"><div id="statTotal" class="stat-val">0</div><div class="stat-lbl">Racine</div></div>
+        <div class="stat-box"><div id="statOk" class="stat-val" style="color:var(--success);">0</div><div class="stat-lbl">Classées</div></div>
+        <div class="stat-box"><div id="statCheck" class="stat-val" style="color:var(--warn);">0</div><div class="stat-lbl">À vérifier</div></div>
+        <div class="stat-box"><div id="statRemaining" class="stat-val" style="color:var(--primary);">0</div><div class="stat-lbl">Restantes</div></div>
       </div>
 
       <div class="btn-row">
-        <button id="startBtn" class="btn-success btn-grow" onclick="startProcessing(false)" disabled>▶️ Traiter les restantes</button>
+        <button id="startBtn" class="btn-success btn-grow" onclick="startProcessing(false)" disabled>⚡ Traiter par lots de 5</button>
         <button id="testOneBtn" class="btn-ghost" onclick="startProcessing(true)" disabled>🧪 Tester 1 photo</button>
         <button id="pauseBtn" class="btn-warn btn-grow hidden" onclick="togglePause()">⏸️ Pause</button>
       </div>
-
-      <div id="currentPreview" class="preview-box hidden">
-        <img id="previewImg" class="preview-thumb" alt="Aperçu redressé" />
-        <div style="font-size:0.82rem; display:flex; flex-direction:column; gap:4px;">
-          <strong id="previewTitle">Analyse...</strong>
-          <div id="previewDetails" style="color:var(--muted);"></div>
-        </div>
-      </div>
     </section>
 
-    <!-- 4. JOURNAL DES FICHIERS TRAITES -->
+    <!-- 4. JOURNAL -->
     <section class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-        <h2 class="card-title">📜 Journal des traitements</h2>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 class="card-title">📜 Journal</h2>
         <span id="historyInfo" style="font-size:0.78rem; color:var(--muted);">0 en mémoire</span>
       </div>
       <div id="logList" class="log-list">
-        <div class="hint">Aucun fichier traité pour le moment. Connectez-vous et scannez le dossier "Mains courantes".</div>
+        <div class="hint">Aucun fichier traité pour le moment.</div>
       </div>
     </section>
   </div>
@@ -470,7 +369,7 @@
   <div id="folderModal" class="modal-backdrop hidden">
     <div class="modal">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <strong style="font-size:1rem;">📂 Choisir un dossier Google Drive</strong>
+        <strong>📂 Choisir un dossier Google Drive</strong>
         <button class="btn-ghost btn-sm" onclick="closeFolderModal()">✕</button>
       </div>
       <div id="modalBreadcrumb" style="font-size:0.8rem; color:var(--muted);">Mon Drive</div>
@@ -484,9 +383,16 @@
 
   <script>
     // =====================================================================
-    // ÉTAT GLOBAL & CONSTANTES
+    // CONSTANTES & ÉTAT
     // =====================================================================
     const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
+    const GEMINI_MODEL = "gemini-2.5-flash";
+    const BATCH_SIZE = 5;
+    const THUMB_MAX_PX = 1000;
+    const THUMB_QUALITY = 0.6;
+    const EXPORT_MAX_PX = 2000;
+    const EXPORT_QUALITY = 0.85;
+
     const STORAGE_KEYS = {
       config: "mc_sorter_config_v1",
       folder: "mc_sorter_folder_v1",
@@ -499,28 +405,25 @@
       tokenExpiresAt: 0,
       gisReady: false,
 
-      selectedFolder: null, // { id, name, path }
-      subfolderCache: {},   // { [parentId]: { [folderName]: folderId } }
-      folderFilesCache: {}, // { [folderId]: Set(existingFileNames) }
+      selectedFolder: null,
+      subfolderCache: {},
+      subfolderInFlight: {},
+      folderFilesCache: {},
+      folderFilesInFlight: {},
 
-      rootImages: [],       // Images trouvées à la racine
-      processedMap: {},     // { [fileId]: { originalName, targetName, targetFolder, status, rotationDeg, notes, webViewLink, processedAt } }
+      rootImages: [],
+      processedMap: {},
 
       isRunning: false,
-      isPaused: false,
-      testSingleMode: false
+      isPaused: false
     };
 
-    const modalNav = {
-      stack: [{ id: "root", name: "Mon Drive" }],
-      items: []
-    };
+    const modalNav = { stack: [{ id: "root", name: "Mon Drive" }] };
 
     // =====================================================================
     // INITIALISATION
     // =====================================================================
     window.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("originDisplay").textContent = window.location.origin;
       loadConfig();
       loadSavedFolder();
       loadProcessedMap();
@@ -529,16 +432,6 @@
       waitForGisAndAutoConnect();
     });
 
-    function toggleConfig() {
-      const body = document.getElementById("configBody");
-      body.classList.toggle("hidden");
-    }
-
-    function copyOrigin() {
-      navigator.clipboard.writeText(window.location.origin);
-      alert("Origine copiée : " + window.location.origin);
-    }
-
     function loadConfig() {
       try {
         const raw = localStorage.getItem(STORAGE_KEYS.config);
@@ -546,20 +439,16 @@
         const cfg = JSON.parse(raw);
         if (cfg.clientId) document.getElementById("clientIdInput").value = cfg.clientId;
         if (cfg.geminiKey) document.getElementById("geminiKeyInput").value = cfg.geminiKey;
-        if (cfg.model) document.getElementById("modelSelect").value = cfg.model;
-        if (cfg.jpegQuality) document.getElementById("jpegQualitySelect").value = cfg.jpegQuality;
-      } catch (e) { console.warn(e); }
+      } catch (e) {}
     }
 
     function saveConfig(silent = false) {
       const cfg = {
         clientId: document.getElementById("clientIdInput").value.trim(),
-        geminiKey: document.getElementById("geminiKeyInput").value.trim(),
-        model: document.getElementById("modelSelect").value,
-        jpegQuality: document.getElementById("jpegQualitySelect").value
+        geminiKey: document.getElementById("geminiKeyInput").value.trim()
       };
       localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(cfg));
-      if (!silent) alert("Configuration sauvegardée localement.");
+      if (!silent) alert("Configuration sauvegardée.");
       return cfg;
     }
 
@@ -570,7 +459,7 @@
           state.selectedFolder = JSON.parse(raw);
           updateFolderUI();
         }
-      } catch (e) { console.warn(e); }
+      } catch (e) {}
     }
 
     function loadProcessedMap() {
@@ -587,7 +476,7 @@
     }
 
     function clearProcessedHistory() {
-      if (!confirm("Effacer l'historique local des photos déjà traitées ? (Ne supprime aucun fichier sur Google Drive.)")) return;
+      if (!confirm("Effacer l'historique local des photos déjà traitées ? (Aucun fichier Drive ne sera supprimé.)")) return;
       state.processedMap = {};
       saveProcessedMap();
       renderStats();
@@ -595,20 +484,17 @@
     }
 
     // =====================================================================
-    // AUTHENTIFICATION OAUTH GOOGLE (AUTOMATIQUE + RENOUVELLEMENT)
+    // GOOGLE OAUTH AUTOMATIQUE
     // =====================================================================
     function waitForGisAndAutoConnect() {
-      const check = setInterval(() => {
-        if (window.google && google.accounts && google.accounts.oauth2) {
-          clearInterval(check);
+      const timer = setInterval(() => {
+        if (window.google?.accounts?.oauth2) {
+          clearInterval(timer);
           state.gisReady = true;
           const cfg = saveConfig(true);
           if (cfg.clientId) {
             initTokenClient(cfg.clientId);
-            // Tentative de connexion OAuth silencieuse automatique
-            requestAccessTokenSilent().catch(() => {
-              setAuthBadge("warn", "🟡 Cliquez sur Connexion Google");
-            });
+            requestTokenPromise("").catch(() => setAuthBadge("warn", "🟡 Cliquez sur Connexion Google"));
           }
         }
       }, 250);
@@ -618,24 +504,18 @@
       state.tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: DRIVE_SCOPE,
-        callback: () => {} // défini dynamiquement dans requestTokenPromise
+        callback: () => {}
       });
     }
 
+    let tokenRefreshPromise = null;
     function requestTokenPromise(promptMode) {
       return new Promise((resolve, reject) => {
-        if (!state.tokenClient) {
-          reject(new Error("Client OAuth non initialisé."));
-          return;
-        }
+        if (!state.tokenClient) return reject(new Error("Client OAuth non initialisé."));
         state.tokenClient.callback = (resp) => {
-          if (resp.error) {
-            reject(new Error(resp.error_description || resp.error));
-            return;
-          }
+          if (resp.error) return reject(new Error(resp.error_description || resp.error));
           state.accessToken = resp.access_token;
-          const expiresIn = Number(resp.expires_in || 3600);
-          state.tokenExpiresAt = Date.now() + expiresIn * 1000;
+          state.tokenExpiresAt = Date.now() + Number(resp.expires_in || 3600) * 1000;
           onAuthenticated();
           resolve(resp.access_token);
         };
@@ -643,28 +523,29 @@
       });
     }
 
-    async function requestAccessTokenSilent() {
-      return requestTokenPromise("");
+    async function ensureValidToken() {
+      if (state.accessToken && Date.now() < state.tokenExpiresAt - 120_000) {
+        return state.accessToken;
+      }
+      if (!tokenRefreshPromise) {
+        tokenRefreshPromise = requestTokenPromise("").finally(() => { tokenRefreshPromise = null; });
+      }
+      try {
+        return await tokenRefreshPromise;
+      } catch {
+        throw new Error("Session Google expirée. Cliquez sur 'Connexion Google Drive' puis reprenez.");
+      }
     }
 
     async function connectGoogle(interactive = true) {
       const cfg = saveConfig(true);
-      if (!cfg.clientId) {
-        alert("Veuillez renseigner votre Google OAuth Client ID.");
-        return;
-      }
-      if (!state.gisReady) {
-        alert("La bibliothèque Google OAuth est encore en cours de chargement, réessayez dans 1 seconde.");
-        return;
-      }
+      if (!cfg.clientId) return alert("Veuillez renseigner votre Google OAuth Client ID.");
+      if (!state.gisReady) return alert("Chargement Google OAuth en cours, réessayez dans 1 seconde.");
       initTokenClient(cfg.clientId);
       try {
         await requestTokenPromise(interactive ? "consent" : "");
       } catch (err) {
-        if (interactive) {
-          // Si consent échoue ou si l'utilisateur préfère select_account
-          setAuthBadge("err", "🔴 Échec connexion : " + err.message);
-        }
+        setAuthBadge("err", "🔴 Échec connexion : " + err.message);
       }
     }
 
@@ -681,26 +562,13 @@
       document.getElementById("scanBtn").disabled = true;
     }
 
-    async function ensureValidToken() {
-      // Renouvelle automatiquement s'il reste moins de 2 minutes
-      if (!state.accessToken || Date.now() > state.tokenExpiresAt - 120_000) {
-        try {
-          await requestAccessTokenSilent();
-        } catch {
-          throw new Error("Session Google expirée. Cliquez sur 'Connexion Google Drive' puis reprenez le traitement.");
-        }
-      }
-      return state.accessToken;
-    }
-
     async function onAuthenticated() {
-      setAuthBadge("ok", "🟢 Connecté à Google Drive");
+      setAuthBadge("ok", "🟢 Connecté");
       document.getElementById("disconnectBtn").classList.remove("hidden");
       document.getElementById("autoFindBtn").disabled = false;
       document.getElementById("browseDriveBtn").disabled = false;
       document.getElementById("scanBtn").disabled = !state.selectedFolder;
 
-      // Recherche automatique du dossier "Prud'hommes > Mains courantes" si non encore sélectionné
       if (!state.selectedFolder) {
         await autoFindMainsCourantes();
       } else {
@@ -721,17 +589,16 @@
     }
 
     // =====================================================================
-    // GOOGLE DRIVE API v3 (REST)
+    // GOOGLE DRIVE API v3
     // =====================================================================
     async function driveFetch(url, options = {}) {
       const token = await ensureValidToken();
       const headers = new Headers(options.headers || {});
       headers.set("Authorization", "Bearer " + token);
-
       const res = await fetch(url, { ...options, headers });
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Drive API (${res.status}): ${text.slice(0, 220)}`);
+        throw new Error(`Drive (${res.status}): ${text.slice(0, 180)}`);
       }
       return res;
     }
@@ -740,7 +607,7 @@
       return str.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
     }
 
-    async function driveListAll(query, fields = "files(id,name,mimeType,parents,size,modifiedTime,webViewLink)") {
+    async function driveListAll(query, fields = "files(id,name,mimeType)") {
       const items = [];
       let pageToken = null;
       do {
@@ -761,48 +628,41 @@
     }
 
     async function autoFindMainsCourantes() {
-      setFolderBadge("warn", "🔍 Recherche en cours...");
+      setFolderBadge("warn", "🔍 Recherche...");
       try {
-        // 1. Chercher le dossier "Prud'hommes"
         const prudFolders = await driveListAll(
           `name = '${escapeDriveQuery("Prud'hommes")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
         );
-
         let target = null;
-        let pathLabel = "";
+        let path = "";
 
-        if (prudFolders.length > 0) {
-          for (const pf of prudFolders) {
-            const mcFolders = await driveListAll(
-              `'${pf.id}' in parents and name = '${escapeDriveQuery("Mains courantes")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
-            );
-            if (mcFolders.length > 0) {
-              target = mcFolders[0];
-              pathLabel = "Prud'hommes / Mains courantes";
-              break;
-            }
+        for (const pf of prudFolders) {
+          const mc = await driveListAll(
+            `'${pf.id}' in parents and name = '${escapeDriveQuery("Mains courantes")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+          );
+          if (mc.length > 0) {
+            target = mc[0];
+            path = "Prud'hommes / Mains courantes";
+            break;
           }
         }
-
-        // Secours : chercher "Mains courantes" partout s'il n'est pas directement sous Prud'hommes
         if (!target) {
-          const fallback = await driveListAll(
+          const fb = await driveListAll(
             `name = '${escapeDriveQuery("Mains courantes")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
           );
-          if (fallback.length === 1) {
-            target = fallback[0];
-            pathLabel = "Mains courantes";
+          if (fb.length === 1) {
+            target = fb[0];
+            path = "Mains courantes";
           }
         }
-
         if (target) {
-          setSelectedFolder(target.id, target.name, pathLabel);
-          setFolderBadge("ok", "✅ Dossier trouvé automatiquement");
+          setSelectedFolder(target.id, target.name, path);
+          setFolderBadge("ok", "✅ Trouvé");
         } else {
-          setFolderBadge("warn", "⚠️ Dossier non trouvé — utilisez Parcourir Drive");
+          setFolderBadge("warn", "⚠️ Utilisez Parcourir");
         }
       } catch (err) {
-        setFolderBadge("err", "❌ Erreur recherche : " + err.message);
+        setFolderBadge("err", "❌ " + err.message);
       }
     }
 
@@ -810,49 +670,39 @@
       state.selectedFolder = { id, name, path };
       localStorage.setItem(STORAGE_KEYS.folder, JSON.stringify(state.selectedFolder));
       updateFolderUI();
-      if (state.accessToken) {
-        document.getElementById("scanBtn").disabled = false;
-      }
+      if (state.accessToken) document.getElementById("scanBtn").disabled = false;
     }
 
     function updateFolderUI() {
       const f = state.selectedFolder;
       document.getElementById("selectedFolderName").textContent = f ? f.name : "Aucun";
-      document.getElementById("selectedFolderPath").textContent = f ? `${f.path} (ID: ${f.id})` : "";
+      document.getElementById("selectedFolderPath").textContent = f ? f.path : "";
     }
 
-    // Explorateur Drive manuel
     async function openFolderModal() {
       modalNav.stack = [{ id: "root", name: "Mon Drive" }];
       document.getElementById("folderModal").classList.remove("hidden");
       await loadModalFolder("root");
     }
-
-    function closeFolderModal() {
-      document.getElementById("folderModal").classList.add("hidden");
-    }
+    function closeFolderModal() { document.getElementById("folderModal").classList.add("hidden"); }
 
     async function loadModalFolder(parentId) {
       const listEl = document.getElementById("modalFolderList");
-      listEl.innerHTML = `<div class="hint">Chargement des dossiers...</div>`;
+      listEl.innerHTML = `<div class="hint">Chargement...</div>`;
       document.getElementById("modalBreadcrumb").textContent = modalNav.stack.map(s => s.name).join(" / ");
-
       const folders = await driveListAll(
-        `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-        "files(id,name)"
+        `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
       );
       folders.sort((a, b) => a.name.localeCompare(b.name, "fr"));
-
       if (folders.length === 0) {
-        listEl.innerHTML = `<div class="hint">Aucun sous-dossier ici. Vous pouvez sélectionner ce dossier.</div>`;
+        listEl.innerHTML = `<div class="hint">Aucun sous-dossier ici.</div>`;
         return;
       }
-
       listEl.innerHTML = "";
       for (const f of folders) {
         const row = document.createElement("div");
         row.className = "folder-row";
-        row.innerHTML = `<span>📁 ${escapeHtml(f.name)}</span><span style="color:var(--muted); font-size:0.8rem;">Ouvrir ›</span>`;
+        row.innerHTML = `<span>📁 ${escapeHtml(f.name)}</span><span style="color:var(--muted);">Ouvrir ›</span>`;
         row.onclick = () => {
           modalNav.stack.push({ id: f.id, name: f.name });
           loadModalFolder(f.id);
@@ -869,14 +719,13 @@
 
     function selectCurrentModalFolder() {
       const current = modalNav.stack[modalNav.stack.length - 1];
-      const path = modalNav.stack.map(s => s.name).join(" / ");
-      setSelectedFolder(current.id, current.name, path);
-      setFolderBadge("ok", "✅ Dossier sélectionné");
+      setSelectedFolder(current.id, current.name, modalNav.stack.map(s => s.name).join(" / "));
+      setFolderBadge("ok", "✅ Sélectionné");
       closeFolderModal();
     }
 
     // =====================================================================
-    // SCAN DES IMAGES À LA RACINE
+    // SCAN & GESTION CONCURRENTE DES SOUS-DOSSIERS (SAFE POUR LOTS DE 5)
     // =====================================================================
     async function scanRootImages() {
       if (!state.selectedFolder) return;
@@ -887,28 +736,23 @@
       try {
         const folderId = state.selectedFolder.id;
         const allFiles = await driveListAll(
-          `'${folderId}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`
+          `'${folderId}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
+          "files(id,name,mimeType)"
         );
 
-        // Filtre strict sur .jpg, .jpeg, .png à la racine
         state.rootImages = allFiles
           .filter(f => /\.(jpe?g|png)$/i.test(f.name || ""))
           .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
-        // Précharger les sous-dossiers existants pour accélérer la suite
         await refreshSubfolderCache(folderId);
-
         renderStats();
+
         const remaining = getRemainingImages().length;
         document.getElementById("startBtn").disabled = remaining === 0;
         document.getElementById("testOneBtn").disabled = remaining === 0;
-        setProgressStatus(
-          remaining > 0
-            ? `Prêt : ${remaining} photo(s) à traiter`
-            : "Toutes les photos de la racine ont déjà été traitées !"
-        );
+        setProgressStatus(remaining > 0 ? `Prêt : ${remaining} photo(s) restante(s)` : "Tout est déjà traité !");
       } catch (err) {
-        alert("Erreur lors du scan : " + err.message);
+        alert("Erreur scan : " + err.message);
         setProgressStatus("Erreur de scan");
       } finally {
         scanBtn.disabled = false;
@@ -925,42 +769,55 @@
         "files(id,name)"
       );
       state.subfolderCache[parentId] = {};
-      for (const sf of subfolders) {
-        state.subfolderCache[parentId][sf.name] = sf.id;
-      }
+      for (const sf of subfolders) state.subfolderCache[parentId][sf.name] = sf.id;
     }
 
     async function ensureSubfolder(parentId, folderName) {
-      if (!state.subfolderCache[parentId]) {
-        await refreshSubfolderCache(parentId);
-      }
-      if (state.subfolderCache[parentId][folderName]) {
-        return state.subfolderCache[parentId][folderName];
-      }
+      if (!state.subfolderCache[parentId]) await refreshSubfolderCache(parentId);
+      if (state.subfolderCache[parentId][folderName]) return state.subfolderCache[parentId][folderName];
 
-      const res = await driveFetch("https://www.googleapis.com/drive/v3/files?fields=id,name", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: folderName,
-          mimeType: "application/vnd.google-apps.folder",
-          parents: [parentId]
-        })
-      });
-      const created = await res.json();
-      state.subfolderCache[parentId][folderName] = created.id;
-      state.folderFilesCache[created.id] = new Set();
-      return created.id;
+      const lockKey = `${parentId}:${folderName}`;
+      if (state.subfolderInFlight[lockKey]) return state.subfolderInFlight[lockKey];
+
+      state.subfolderInFlight[lockKey] = (async () => {
+        try {
+          const res = await driveFetch("https://www.googleapis.com/drive/v3/files?fields=id,name", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: folderName,
+              mimeType: "application/vnd.google-apps.folder",
+              parents: [parentId]
+            })
+          });
+          const created = await res.json();
+          state.subfolderCache[parentId][folderName] = created.id;
+          state.folderFilesCache[created.id] = new Set();
+          return created.id;
+        } finally {
+          delete state.subfolderInFlight[lockKey];
+        }
+      })();
+
+      return state.subfolderInFlight[lockKey];
     }
 
     async function resolveUniqueFilename(targetFolderId, desiredName) {
       if (!state.folderFilesCache[targetFolderId]) {
-        const existing = await driveListAll(
-          `'${targetFolderId}' in parents and trashed = false`,
-          "files(name)"
-        );
-        state.folderFilesCache[targetFolderId] = new Set(existing.map(x => x.name));
+        if (!state.folderFilesInFlight[targetFolderId]) {
+          state.folderFilesInFlight[targetFolderId] = driveListAll(
+            `'${targetFolderId}' in parents and trashed = false`,
+            "files(name)"
+          ).then(existing => {
+            state.folderFilesCache[targetFolderId] = new Set(existing.map(x => x.name));
+          }).finally(() => {
+            delete state.folderFilesInFlight[targetFolderId];
+          });
+        }
+        await state.folderFilesInFlight[targetFolderId];
       }
+
+      // Opération synchrone atomique entre les 5 tâches parallèles
       const existingSet = state.folderFilesCache[targetFolderId];
       if (!existingSet.has(desiredName)) {
         existingSet.add(desiredName);
@@ -969,158 +826,108 @@
       const dotIdx = desiredName.lastIndexOf(".");
       const base = dotIdx > 0 ? desiredName.slice(0, dotIdx) : desiredName;
       const ext = dotIdx > 0 ? desiredName.slice(dotIdx) : "";
-      let counter = 2;
-      while (existingSet.has(`${base} (${counter})${ext}`)) {
-        counter++;
-      }
-      const unique = `${base} (${counter})${ext}`;
+      let n = 2;
+      while (existingSet.has(`${base} (${n})${ext}`)) n++;
+      const unique = `${base} (${n})${ext}`;
       existingSet.add(unique);
       return unique;
     }
 
-    async function uploadBlobToDrive(blob, fileName, mimeType, parentFolderId) {
-      const boundary = "mc_boundary_" + Math.random().toString(36).slice(2);
-      const metadata = JSON.stringify({
-        name: fileName,
-        parents: [parentFolderId],
-        mimeType
-      });
-
-      const headerPart =
-        `--${boundary}\r\n` +
-        `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
-        `${metadata}\r\n` +
-        `--${boundary}\r\n` +
-        `Content-Type: ${mimeType}\r\n\r\n`;
-      const footerPart = `\r\n--${boundary}--`;
-
-      const multipartBody = new Blob([headerPart, blob, footerPart], {
-        type: `multipart/related; boundary=${boundary}`
-      });
+    async function uploadJpegToDrive(blob, fileName, parentFolderId) {
+      const boundary = "mc_b_" + Math.random().toString(36).slice(2);
+      const metadata = JSON.stringify({ name: fileName, parents: [parentFolderId], mimeType: "image/jpeg" });
+      const body = new Blob([
+        `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
+        `--${boundary}\r\nContent-Type: image/jpeg\r\n\r\n`,
+        blob,
+        `\r\n--${boundary}--`
+      ], { type: `multipart/related; boundary=${boundary}` });
 
       const res = await driveFetch(
         "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink",
-        {
-          method: "POST",
-          body: multipartBody
-        }
+        { method: "POST", body }
       );
       return res.json();
     }
 
     // =====================================================================
-    // TRAITEMENT IMAGE (EXIF + CANVAS ROTATION)
+    // TRAITEMENT IMAGE RAPIDE (MINIATURE 1000px + EXPORT 2000px JPEG 0.85)
     // =====================================================================
-    async function blobToAnalysisBase64(blob) {
-      // createImageBitmap applique automatiquement l'orientation EXIF :
-      // ainsi Gemini voit EXACTEMENT l'image telle que Canvas la dessinera à 0°.
-      const bitmap = await createImageBitmap(blob);
-      try {
-        const maxSide = 1600;
-        const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-        const w = Math.max(1, Math.round(bitmap.width * scale));
-        const h = Math.max(1, Math.round(bitmap.height * scale));
+    function drawScaledToCanvas(bitmap, maxSide) {
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+      const w = Math.max(1, Math.round(bitmap.width * scale));
+      const h = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d").drawImage(bitmap, 0, 0, w, h);
+      return canvas;
+    }
 
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
+    async function makeGeminiThumbnailBase64(bitmap) {
+      const canvas = drawScaledToCanvas(bitmap, THUMB_MAX_PX);
+      const b64 = canvas.toDataURL("image/jpeg", THUMB_QUALITY).split(",")[1];
+      canvas.width = 0;
+      canvas.height = 0;
+      return b64;
+    }
+
+    async function rotateAndExportJpeg(bitmap, clockwiseDeg) {
+      const scale = Math.min(1, EXPORT_MAX_PX / Math.max(bitmap.width, bitmap.height));
+      let w = Math.max(1, Math.round(bitmap.width * scale));
+      let h = Math.max(1, Math.round(bitmap.height * scale));
+
+      const norm = ((Number(clockwiseDeg) || 0) % 360 + 360) % 360;
+      const isNear = (a, b) => Math.abs(a - b) < 0.75;
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      if (isNear(norm, 0) || isNear(norm, 360)) {
+        canvas.width = w; canvas.height = h;
         ctx.drawImage(bitmap, 0, 0, w, h);
+      } else if (isNear(norm, 90)) {
+        canvas.width = h; canvas.height = w;
+        ctx.translate(h, 0); ctx.rotate(Math.PI / 2);
+        ctx.drawImage(bitmap, 0, 0, w, h);
+      } else if (isNear(norm, 180)) {
+        canvas.width = w; canvas.height = h;
+        ctx.translate(w, h); ctx.rotate(Math.PI);
+        ctx.drawImage(bitmap, 0, 0, w, h);
+      } else if (isNear(norm, 270)) {
+        canvas.width = h; canvas.height = w;
+        ctx.translate(0, w); ctx.rotate(-Math.PI / 2);
+        ctx.drawImage(bitmap, 0, 0, w, h);
+      } else {
+        const rad = (norm * Math.PI) / 180;
+        const cos = Math.abs(Math.cos(rad));
+        const sin = Math.abs(Math.sin(rad));
+        let outW = Math.ceil(w * cos + h * sin);
+        let outH = Math.ceil(w * sin + h * cos);
+        const clamp = Math.min(1, EXPORT_MAX_PX / Math.max(outW, outH));
+        outW = Math.round(outW * clamp);
+        outH = Math.round(outH * clamp);
+        w = Math.round(w * clamp);
+        h = Math.round(h * clamp);
 
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-        canvas.width = 0;
-        canvas.height = 0;
-        return dataUrl.split(",")[1];
-      } finally {
-        bitmap.close();
+        canvas.width = outW; canvas.height = outH;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, outW, outH);
+        ctx.translate(outW / 2, outH / 2);
+        ctx.rotate(rad);
+        ctx.drawImage(bitmap, -w / 2, -h / 2, w, h);
       }
-    }
 
-    async function rotateImageBlob(blob, clockwiseDeg, outputMime = "image/jpeg", quality = 0.92) {
-      const bitmap = await createImageBitmap(blob);
-      try {
-        let w = bitmap.width;
-        let h = bitmap.height;
-
-        // Sécurité mémoire mobile (limite Safari iOS ~16.7 Mpx)
-        const MAX_PIXELS = 15_500_000;
-        if (w * h > MAX_PIXELS) {
-          const factor = Math.sqrt(MAX_PIXELS / (w * h));
-          w = Math.floor(w * factor);
-          h = Math.floor(h * factor);
-        }
-
-        const norm = ((Number(clockwiseDeg) || 0) % 360 + 360) % 360;
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-
-        const isNear = (a, b) => Math.abs(a - b) < 0.75;
-
-        if (isNear(norm, 0) || isNear(norm, 360)) {
-          canvas.width = w;
-          canvas.height = h;
-          ctx.drawImage(bitmap, 0, 0, w, h);
-        } else if (isNear(norm, 90)) {
-          canvas.width = h;
-          canvas.height = w;
-          ctx.translate(h, 0);
-          ctx.rotate(Math.PI / 2);
-          ctx.drawImage(bitmap, 0, 0, w, h);
-        } else if (isNear(norm, 180)) {
-          canvas.width = w;
-          canvas.height = h;
-          ctx.translate(w, h);
-          ctx.rotate(Math.PI);
-          ctx.drawImage(bitmap, 0, 0, w, h);
-        } else if (isNear(norm, 270)) {
-          canvas.width = h;
-          canvas.height = w;
-          ctx.translate(0, w);
-          ctx.rotate(-Math.PI / 2);
-          ctx.drawImage(bitmap, 0, 0, w, h);
-        } else {
-          // Angle fin (image penchée) : calcul de la boîte englobante complète
-          const rad = (norm * Math.PI) / 180;
-          const cos = Math.abs(Math.cos(rad));
-          const sin = Math.abs(Math.sin(rad));
-          let outW = Math.ceil(w * cos + h * sin);
-          let outH = Math.ceil(w * sin + h * cos);
-
-          if (outW * outH > MAX_PIXELS) {
-            const f = Math.sqrt(MAX_PIXELS / (outW * outH));
-            outW = Math.floor(outW * f);
-            outH = Math.floor(outH * f);
-            w = Math.floor(w * f);
-            h = Math.floor(h * f);
-          }
-
-          canvas.width = outW;
-          canvas.height = outH;
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, outW, outH);
-          ctx.translate(outW / 2, outH / 2);
-          ctx.rotate(rad);
-          ctx.drawImage(bitmap, -w / 2, -h / 2, w, h);
-        }
-
-        const outBlob = await new Promise((resolve, reject) => {
-          canvas.toBlob(
-            b => (b ? resolve(b) : reject(new Error("Échec encodage Canvas"))),
-            outputMime,
-            outputMime === "image/jpeg" ? quality : undefined
-          );
-        });
-
-        canvas.width = 0;
-        canvas.height = 0;
-        return outBlob;
-      } finally {
-        bitmap.close();
-      }
+      const outBlob = await new Promise((resolve, reject) => {
+        canvas.toBlob(b => (b ? resolve(b) : reject(new Error("Erreur export JPEG"))), "image/jpeg", EXPORT_QUALITY);
+      });
+      canvas.width = 0;
+      canvas.height = 0;
+      return outBlob;
     }
 
     // =====================================================================
-    // ANALYSE GEMINI API (STRUCTURED OUTPUT)
+    // GEMINI 2.5 FLASH (THINKINGBUDGET: 0 — 2 INFOS SEULEMENT)
     // =====================================================================
     const GEMINI_SCHEMA = {
       type: "OBJECT",
@@ -1129,80 +936,52 @@
         is_readable: { type: "BOOLEAN" },
         doubt_reason: { type: "STRING" },
         rotation_clockwise_deg: { type: "NUMBER" },
-        guillaume_shift_found: { type: "BOOLEAN" },
         start_day: { type: "INTEGER" },
         start_month: { type: "INTEGER" },
         start_year: { type: "INTEGER" },
-        shift_type: {
-          type: "STRING",
-          enum: ["Jour", "Nuit", "Jour et Nuit", "Inconnu"]
-        },
-        relief_agent_surname: { type: "STRING" },
-        confidence_notes: { type: "STRING" }
+        agent_name: { type: "STRING" }
       },
       required: [
         "is_logbook",
         "is_readable",
         "doubt_reason",
         "rotation_clockwise_deg",
-        "guillaume_shift_found",
         "start_day",
         "start_month",
         "start_year",
-        "shift_type",
-        "relief_agent_surname",
-        "confidence_notes"
+        "agent_name"
       ]
     };
 
-    const GEMINI_PROMPT = `Tu es un assistant expert chargé d'analyser une photo d'un cahier manuscrit de "main courante" d'agent de sécurité en France.
+    const GEMINI_PROMPT = `Analyse cette photo de main courante manuscrite de sécurité en France.
 
-TÂCHE 1 — ORIENTATION EXACTE (rotation_clockwise_deg) :
-Détermine de combien de degrés tourner cette image DANS LE SENS HORAIRE (aiguilles d'une montre) pour que le texte manuscrit soit parfaitement horizontal, lisible de gauche à droite et tête en haut :
-- 0 : déjà parfaitement à l'endroit.
-- 90 : le haut de la page est à gauche (texte écrit verticalement de bas en haut).
-- 180 : page à l'envers (tête en bas).
-- 270 : le haut de la page est à droite (texte écrit verticalement de haut en bas).
-- Si la page est penchée/inclinée de façon visible (plus de 2°), donne l'angle horaire exact (ex: 94, 176, 355). Sinon donne exactement 0, 90, 180 ou 270.
+1) ROTATION (rotation_clockwise_deg) : angle horaire exact (0, 90, 180, 270, ou angle précis si penchée) pour remettre le texte parfaitement horizontal et à l'endroit dans le sens de lecture.
 
-TÂCHE 2 — VALIDITÉ DU DOCUMENT :
-- is_logbook : true si c'est bien une photo de cahier/feuille de main courante de sécurité, false sinon (ex: photo personnelle, badge, planning, écran, etc.).
-- is_readable : true UNIQUEMENT si les informations nécessaires (date complète avec année, vacation de Guillaume BEDOUET si double page, agent de relève, Jour/Nuit) sont lisibles et non coupées. Si flou, illisible, date/année coupée ou absente, ou vacation de Guillaume BEDOUET introuvable, mets is_readable = false et indique une raison courte en français dans doubt_reason (ex: "Image floue", "Date coupée", "Année manquante", "Pas une main courante", "Agent relève illisible", "Guillaume BEDOUET absent").
+2) LISIBILITÉ :
+- is_logbook : true si c'est bien une main courante de sécurité, false sinon.
+- is_readable : true si la DATE complète (jour, mois, année) ET le NOM sont lisibles et non coupés. Sinon false avec une courte raison en français dans doubt_reason (ex: "Date coupée", "Année manquante", "Nom illisible", "Image floue", "Pas une main courante").
 
-TÂCHE 3 — LECTURE DE LA VACATION DE GUILLAUME BEDOUET :
-- Si une double page montre deux vacations différentes, cible EXCLUSIVEMENT celle de "Guillaume BEDOUET" (ou "G. BEDOUET", "Bedouet"). Mets guillaume_shift_found = true si trouvé.
-- Date de DÉBUT de vacation : en France, les dates manuscrites sont écrites JJ/MM/AAAA (jour puis mois). Extrais séparément :
-  * start_day (1..31, ou 0 si illisible/coupé)
-  * start_month (1..12, ou 0 si illisible/coupé)
-  * start_year (année complète à 4 chiffres ex: 2025, ou 0 si absente/coupée)
-- shift_type : indique si la vacation a été effectuée de "Jour", de "Nuit", "Jour et Nuit", ou "Inconnu" si impossible à déterminer (regarde les horaires de prise/fin de service ou mentions Jour/Nuit).
-- relief_agent_surname : extrais UNIQUEMENT le nom de famille de l'agent qui fait la relève (celui relevé par Guillaume BEDOUET en début de vacation OU celui qui le relève en fin de vacation). Chaîne vide si absent ou illisible.`;
+3) DEUX INFORMATIONS UNIQUEMENT :
+- DATE (attention format français JJ/MM/AAAA) : start_day (1..31), start_month (1..12), start_year (4 chiffres ex: 2025). Si double page, prendre la vacation de Guillaume BEDOUET si visible.
+- NOM (agent_name) : uniquement le nom de famille de l'agent qui fait la relève, OU le nom de famille de l'agent présent si un seul nom figure sur la page. Chaîne vide si illisible.`;
 
-    async function analyzeWithGemini(base64Jpeg, geminiKey, model) {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-
+    async function analyzeWithGemini(base64Thumb, geminiKey) {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
       const payload = {
-        contents: [
-          {
-            parts: [
-              { text: GEMINI_PROMPT },
-              {
-                inlineData: {
-                  mimeType: "image/jpeg",
-                  data: base64Jpeg
-                }
-              }
-            ]
-          }
-        ],
+        contents: [{
+          parts: [
+            { text: GEMINI_PROMPT },
+            { inlineData: { mimeType: "image/jpeg", data: base64Thumb } }
+          ]
+        }],
         generationConfig: {
           responseMimeType: "application/json",
-          responseSchema: GEMINI_SCHEMA
+          responseSchema: GEMINI_SCHEMA,
+          thinkingConfig: { thinkingBudget: 0 }
         }
       };
 
-      // Retry automatique en cas de quota temporaire (429 / 503)
-      const delays = [2000, 5000, 10000];
+      const delays = [1500, 3500, 8000];
       for (let attempt = 0; attempt <= delays.length; attempt++) {
         const res = await fetch(endpoint, {
           method: "POST",
@@ -1219,36 +998,31 @@ TÂCHE 3 — LECTURE DE LA VACATION DE GUILLAUME BEDOUET :
           if (!text) throw new Error("Réponse Gemini vide.");
           return JSON.parse(text);
         }
-
         const errText = await res.text();
         if ((res.status === 429 || res.status === 503) && attempt < delays.length) {
-          setProgressStatus(`Limite API Gemini (${res.status}), nouvelle tentative dans ${delays[attempt] / 1000}s...`);
           await sleep(delays[attempt]);
           continue;
         }
-        throw new Error(`Gemini API (${res.status}): ${errText.slice(0, 220)}`);
+        throw new Error(`Gemini (${res.status}): ${errText.slice(0, 180)}`);
       }
     }
 
     // =====================================================================
-    // RÈGLES MÉTIER : VALIDATION & NOMMAGE
+    // NOMMAGE & CLASSEMENT SIMPLIFIÉ
     // =====================================================================
-    function sanitizeFilenamePart(str) {
-      return (str || "")
-        .replace(/[\/\\:*?"<>|]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
+    function sanitizePart(str) {
+      return (str || "").replace(/[\/\\:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
     }
 
     function formatSurname(raw) {
-      const cleaned = sanitizeFilenamePart(raw);
+      const cleaned = sanitizePart(raw);
       if (!cleaned) return "";
       return cleaned
         .toLowerCase()
         .replace(/(^|[\s-])([a-zàâäéèêëîïôöùûüç])/g, (m, sep, ch) => sep + ch.toUpperCase());
     }
 
-    function isValidCalendarDate(y, m, d) {
+    function isValidDate(y, m, d) {
       if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return false;
       if (y < 2020 || y > 2030 || m < 1 || m > 12 || d < 1 || d > 31) return false;
       const dt = new Date(Date.UTC(y, m - 1, d));
@@ -1256,159 +1030,124 @@ TÂCHE 3 — LECTURE DE LA VACATION DE GUILLAUME BEDOUET :
     }
 
     function buildClassification(analysis, originalFilename) {
-      const validShifts = ["Jour", "Nuit", "Jour et Nuit"];
-      const surname = formatSurname(analysis.relief_agent_surname);
-      const dateOk = isValidCalendarDate(analysis.start_year, analysis.start_month, analysis.start_day);
-      const shiftOk = validShifts.includes(analysis.shift_type);
+      const surname = formatSurname(analysis.agent_name);
+      const dateOk = isValidDate(analysis.start_year, analysis.start_month, analysis.start_day);
 
-      const allReadable =
-        analysis.is_logbook === true &&
-        analysis.is_readable === true &&
-        analysis.guillaume_shift_found === true &&
-        dateOk &&
-        shiftOk &&
-        surname.length > 0;
-
-      if (allReadable) {
+      if (analysis.is_logbook && analysis.is_readable && dateOk && surname.length > 0) {
         const mm = String(analysis.start_month).padStart(2, "0");
         const jj = String(analysis.start_day).padStart(2, "0");
         const aaaa = String(analysis.start_year);
         return {
           status: "ok",
           targetFolderName: aaaa,
-          desiredFilename: `${mm}-${jj}-${aaaa} - Relève ${surname} - ${analysis.shift_type}.jpg`,
-          outputMime: "image/jpeg",
+          desiredFilename: `${mm}-${jj}-${aaaa} - ${surname}.jpg`,
           reason: ""
         };
       }
 
-      // Détermination de la raison du doute pour le préfixe dans "À vérifier"
-      let reason = sanitizeFilenamePart(analysis.doubt_reason);
+      let reason = sanitizePart(analysis.doubt_reason);
       if (!reason) {
         if (!analysis.is_logbook) reason = "Pas une main courante";
-        else if (!analysis.guillaume_shift_found) reason = "Guillaume BEDOUET non trouvé";
-        else if (!dateOk) reason = "Date ou année illisible";
-        else if (!surname) reason = "Relève illisible";
-        else if (!shiftOk) reason = "Jour ou Nuit incertain";
+        else if (!dateOk) reason = "Date illisible";
+        else if (!surname) reason = "Nom illisible";
         else reason = "À vérifier";
       }
 
-      const isPng = /\.png$/i.test(originalFilename);
+      const baseOriginal = sanitizePart(originalFilename.replace(/\.(jpe?g|png)$/i, ""));
       return {
         status: "check",
         targetFolderName: "À vérifier",
-        desiredFilename: `${reason} - ${sanitizeFilenamePart(originalFilename)}`,
-        outputMime: isPng ? "image/png" : "image/jpeg",
+        desiredFilename: `${reason} - ${baseOriginal}.jpg`,
         reason
       };
     }
 
     // =====================================================================
-    // BOUCLE DE TRAITEMENT SÉQUENTIELLE (NON BLOQUANTE + PAUSE/REPRISE)
+    // TRAITEMENT PAR LOTS DE 5 EN PARALLÈLE
     // =====================================================================
-    async function startProcessing(singleTest = false) {
-      const cfg = saveConfig(true);
-      if (!cfg.geminiKey) {
-        alert("Veuillez renseigner votre clé API Gemini dans la configuration.");
-        return;
-      }
-      if (!state.selectedFolder) {
-        alert("Veuillez sélectionner le dossier Google Drive source.");
-        return;
+    async function processSingleFile(file, rootFolderId, geminiKey) {
+      const dlRes = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
+      const origBlob = await dlRes.blob();
+      const bitmap = await createImageBitmap(origBlob);
+
+      let rotatedBlob, analysis, decision;
+      try {
+        const thumbB64 = await makeGeminiThumbnailBase64(bitmap);
+        analysis = await analyzeWithGemini(thumbB64, geminiKey);
+        decision = buildClassification(analysis, file.name);
+        rotatedBlob = await rotateAndExportJpeg(bitmap, analysis.rotation_clockwise_deg);
+      } finally {
+        bitmap.close();
       }
 
+      const targetFolderId = await ensureSubfolder(rootFolderId, decision.targetFolderName);
+      const finalName = await resolveUniqueFilename(targetFolderId, decision.desiredFilename);
+      const uploaded = await uploadJpegToDrive(rotatedBlob, finalName, targetFolderId);
+
+      state.processedMap[file.id] = {
+        fileId: file.id,
+        originalName: file.name,
+        targetName: uploaded.name || finalName,
+        targetFolder: decision.targetFolderName,
+        status: decision.status,
+        rotationDeg: analysis.rotation_clockwise_deg,
+        webViewLink: uploaded.webViewLink || "",
+        processedAt: new Date().toISOString()
+      };
+      saveProcessedMap();
+      renderStats();
+      renderLogs();
+    }
+
+    async function startProcessing(singleTest = false) {
+      const cfg = saveConfig(true);
+      if (!cfg.geminiKey) return alert("Renseignez votre clé API Gemini.");
+      if (!state.selectedFolder) return alert("Sélectionnez le dossier Drive.");
+
       const queue = getRemainingImages();
-      if (queue.length === 0) {
-        alert("Aucune image restante à traiter.");
-        return;
-      }
+      if (queue.length === 0) return alert("Aucune photo restante !");
 
       state.isRunning = true;
       state.isPaused = false;
-      state.testSingleMode = singleTest;
       updateControlButtons();
 
-      const totalBatch = singleTest ? 1 : queue.length;
       const rootFolderId = state.selectedFolder.id;
-      const jpegQuality = Number(cfg.jpegQuality || 0.92);
+      const toProcess = singleTest ? queue.slice(0, 1) : queue;
+      const total = toProcess.length;
+      const errors = [];
 
       try {
-        for (let i = 0; i < totalBatch; i++) {
+        for (let i = 0; i < total; i += BATCH_SIZE) {
           if (state.isPaused) {
             setProgressStatus("⏸️ En pause — progression sauvegardée.");
             break;
           }
 
-          const file = queue[i];
-          const label = `[${i + 1}/${totalBatch}] ${file.name}`;
+          const batch = toProcess.slice(i, i + BATCH_SIZE);
+          const endIdx = Math.min(i + batch.length, total);
+          setProgressStatus(`⚡ Lot ${i + 1}–${endIdx} / ${total} en parallèle...`);
 
-          // 1. Téléchargement
-          setProgressStatus(`⬇️ Téléchargement ${label}`);
-          await yieldToMain();
-          const dlRes = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
-          const originalBlob = await dlRes.blob();
-
-          if (state.isPaused) { setProgressStatus("⏸️ En pause."); break; }
-
-          // 2. Préparation image & Analyse Gemini
-          setProgressStatus(`🤖 Analyse Gemini ${label}`);
-          await yieldToMain();
-          const base64Preview = await blobToAnalysisBase64(originalBlob);
-          const analysis = await analyzeWithGemini(base64Preview, cfg.geminiKey, cfg.model);
-
-          // 3. Rotation réelle sur Canvas
-          setProgressStatus(`🔄 Redressement (${analysis.rotation_clockwise_deg}°) ${label}`);
-          await yieldToMain();
-          const decision = buildClassification(analysis, file.name);
-          const rotatedBlob = await rotateImageBlob(
-            originalBlob,
-            analysis.rotation_clockwise_deg,
-            decision.outputMime,
-            jpegQuality
+          const results = await Promise.allSettled(
+            batch.map(file => processSingleFile(file, rootFolderId, cfg.geminiKey))
           );
 
-          // Aperçu instantané à l'écran
-          showPreview(rotatedBlob, file.name, decision, analysis);
-
-          // 4. Création du sous-dossier cible & Upload de la copie redressée
-          setProgressStatus(`☁️ Envoi vers "${decision.targetFolderName}"...`);
-          await yieldToMain();
-          const targetFolderId = await ensureSubfolder(rootFolderId, decision.targetFolderName);
-          const finalName = await resolveUniqueFilename(targetFolderId, decision.desiredFilename);
-          const uploaded = await uploadBlobToDrive(rotatedBlob, finalName, decision.outputMime, targetFolderId);
-
-          // 5. Enregistrement persistant immédiat (reprise possible à tout moment)
-          state.processedMap[file.id] = {
-            fileId: file.id,
-            originalName: file.name,
-            targetName: uploaded.name || finalName,
-            targetFolder: decision.targetFolderName,
-            status: decision.status,
-            reason: decision.reason,
-            rotationDeg: analysis.rotation_clockwise_deg,
-            notes: analysis.confidence_notes || "",
-            webViewLink: uploaded.webViewLink || "",
-            processedAt: new Date().toISOString()
-          };
-          saveProcessedMap();
-          renderStats();
-          renderLogs();
-
-          // Petite respiration UI entre deux photos
-          await sleep(150);
+          results.forEach((res, idx) => {
+            if (res.status === "rejected") {
+              errors.push(`${batch[idx].name} : ${res.reason?.message || res.reason}`);
+            }
+          });
         }
 
         if (!state.isPaused) {
           setProgressStatus(
-            singleTest
-              ? "✅ Test sur 1 photo terminé ! Vérifiez le résultat ci-dessous."
-              : "✅ Traitement terminé !"
+            errors.length > 0
+              ? `⚠️ Terminé avec ${errors.length} erreur(s)`
+              : (singleTest ? "✅ Test 1 photo terminé !" : "✅ Toutes les photos ont été traitées !")
           );
+          if (errors.length > 0) {
+            alert("Erreurs sur certaines photos (non marquées comme traitées, vous pouvez relancer) :\n\n" + errors.slice(0, 5).join("\n"));
+          }
         }
-      } catch (err) {
-        console.error(err);
-        setProgressStatus("❌ Interrompu : " + err.message);
-        alert("Traitement interrompu (votre progression précédente est sauvegardée) :\n\n" + err.message);
       } finally {
         state.isRunning = false;
         state.isPaused = false;
@@ -1420,8 +1159,9 @@ TÂCHE 3 — LECTURE DE LA VACATION DE GUILLAUME BEDOUET :
     function togglePause() {
       if (!state.isRunning) return;
       state.isPaused = true;
-      document.getElementById("pauseBtn").disabled = true;
-      document.getElementById("pauseBtn").textContent = "⏳ Arrêt après cette photo...";
+      const btn = document.getElementById("pauseBtn");
+      btn.disabled = true;
+      btn.textContent = "⏳ Fin du lot en cours...";
     }
 
     function updateControlButtons() {
@@ -1449,37 +1189,21 @@ TÂCHE 3 — LECTURE DE LA VACATION DE GUILLAUME BEDOUET :
     }
 
     // =====================================================================
-    // INTERFACE UTILISATEUR (PROGRESSION, APERÇU, JOURNAL)
+    // UI STATS & JOURNAL
     // =====================================================================
     function setProgressStatus(msg) {
       document.getElementById("progressStatus").textContent = msg;
-    }
-
-    let lastPreviewUrl = null;
-    function showPreview(blob, originalName, decision, analysis) {
-      if (lastPreviewUrl) URL.revokeObjectURL(lastPreviewUrl);
-      lastPreviewUrl = URL.createObjectURL(blob);
-
-      document.getElementById("currentPreview").classList.remove("hidden");
-      document.getElementById("previewImg").src = lastPreviewUrl;
-      document.getElementById("previewTitle").textContent =
-        `${decision.targetFolderName} / ${decision.desiredFilename}`;
-      document.getElementById("previewDetails").textContent =
-        `Original : ${originalName} • Rotation : ${analysis.rotation_clockwise_deg}° • ${analysis.confidence_notes || ""}`;
     }
 
     function renderStats() {
       const total = state.rootImages.length;
       const rootIds = new Set(state.rootImages.map(f => f.id));
 
-      let okCount = 0;
-      let checkCount = 0;
-      let doneInRoot = 0;
-
-      for (const entry of Object.values(state.processedMap)) {
-        if (entry.status === "ok") okCount++;
+      let okCount = 0, checkCount = 0, doneInRoot = 0;
+      for (const e of Object.values(state.processedMap)) {
+        if (e.status === "ok") okCount++;
         else checkCount++;
-        if (rootIds.has(entry.fileId)) doneInRoot++;
+        if (rootIds.has(e.fileId)) doneInRoot++;
       }
 
       const remaining = Math.max(0, total - doneInRoot);
@@ -1489,7 +1213,6 @@ TÂCHE 3 — LECTURE DE LA VACATION DE GUILLAUME BEDOUET :
       document.getElementById("statOk").textContent = okCount;
       document.getElementById("statCheck").textContent = checkCount;
       document.getElementById("statRemaining").textContent = remaining;
-
       document.getElementById("progressCount").textContent = `${doneInRoot} / ${total} (${pct}%)`;
       document.getElementById("progressFill").style.width = `${pct}%`;
       document.getElementById("historyInfo").textContent = `${Object.keys(state.processedMap).length} en mémoire`;
@@ -1497,9 +1220,9 @@ TÂCHE 3 — LECTURE DE LA VACATION DE GUILLAUME BEDOUET :
 
     function renderLogs() {
       const list = document.getElementById("logList");
-      const entries = Object.values(state.processedMap).sort(
-        (a, b) => new Date(b.processedAt) - new Date(a.processedAt)
-      );
+      const entries = Object.values(state.processedMap)
+        .sort((a, b) => new Date(b.processedAt) - new Date(a.processedAt))
+        .slice(0, 150);
 
       if (entries.length === 0) {
         list.innerHTML = `<div class="hint">Aucun fichier traité pour le moment.</div>`;
@@ -1509,19 +1232,14 @@ TÂCHE 3 — LECTURE DE LA VACATION DE GUILLAUME BEDOUET :
       list.innerHTML = entries.map(e => {
         const cls = e.status === "ok" ? "ok" : "check";
         const icon = e.status === "ok" ? "✅" : "⚠️";
-        const linkHtml = e.webViewLink
-          ? `<a href="${escapeHtml(e.webViewLink)}" target="_blank" rel="noopener">Ouvrir dans Drive ↗</a>`
-          : "";
+        const link = e.webViewLink ? `<a href="${escapeHtml(e.webViewLink)}" target="_blank" rel="noopener">Ouvrir ↗</a>` : "";
         return `
           <div class="log-item ${cls}">
             <div class="log-top">
               <span>${icon} ${escapeHtml(e.targetFolder)} / ${escapeHtml(e.targetName)}</span>
-              ${linkHtml}
+              ${link}
             </div>
-            <div class="log-sub">
-              Original : ${escapeHtml(e.originalName)} • Rotation : ${e.rotationDeg}°
-              ${e.notes ? " • " + escapeHtml(e.notes) : ""}
-            </div>
+            <div class="log-sub">${escapeHtml(e.originalName)} • ${e.rotationDeg}°</div>
           </div>
         `;
       }).join("");
@@ -1535,8 +1253,7 @@ TÂCHE 3 — LECTURE DE LA VACATION DE GUILLAUME BEDOUET :
         .replace(/"/g, "&quot;");
     }
 
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-    const yieldToMain = () => new Promise(r => setTimeout(r, 0));
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
   </script>
 </body>
 </html>
