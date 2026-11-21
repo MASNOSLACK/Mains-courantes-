@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Tri Mains Courantes — Prud'hommes</title>
+  <title>Mains Courantes — Classement Définitif & Doublons</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     :root {
       --bg: #0f172a;
@@ -48,7 +47,7 @@
       flex-wrap: wrap;
     }
 
-    h1 { font-size: 1.15rem; margin: 0; }
+    h1 { font-size: 1.12rem; margin: 0; }
 
     .badge {
       display: inline-flex;
@@ -98,6 +97,21 @@
       font-size: 0.8rem;
       color: var(--muted);
       font-weight: 600;
+    }
+
+    label.checkbox-row {
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 0.84rem;
+    }
+    label.checkbox-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: var(--primary);
     }
 
     input, select {
@@ -187,7 +201,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      max-height: 400px;
+      max-height: 420px;
       overflow-y: auto;
     }
     .log-item {
@@ -202,6 +216,7 @@
       gap: 3px;
     }
     .log-item.ok { border-left-color: var(--success); }
+    .log-item.dup { border-left-color: #a855f7; }
     .log-item.check { border-left-color: var(--warn); }
     .log-item.err { border-left-color: var(--danger); }
 
@@ -269,14 +284,14 @@
 <body>
   <div class="container">
     <header>
-      <h1>⚡ Tri Prud'hommes (JPG & PDF)</h1>
+      <h1>📂 Mains Courantes — Définitif & Doublons</h1>
       <span id="authBadge" class="badge">⚪ Non connecté</span>
     </header>
 
-    <!-- 1. CONNEXION -->
+    <!-- 1. CONNEXION & MODE -->
     <section class="card">
       <div class="card-header" onclick="document.getElementById('configBody').classList.toggle('hidden')">
-        <h2 class="card-title">⚙️ Connexion Google & Gemini</h2>
+        <h2 class="card-title">⚙️ Connexion & Mode d'analyse des relèves</h2>
         <span class="badge">Afficher / Masquer</span>
       </div>
 
@@ -294,29 +309,29 @@
 
         <div class="grid-2">
           <label>
-            Modèle Gemini
-            <select id="modelSelect">
-              <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Rapide — Recommandé)</option>
-              <option value="gemini-3.8-flash">gemini-3.8-flash (Haute précision)</option>
-              <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Ancien modèle)</option>
+            Mode de traitement des relèves
+            <select id="modeSelect">
+              <option value="smart">🎯 Gemini sur "Inconnu" / noms hors liste (Recommandé)</option>
+              <option value="all_gemini">🤖 Re-vérifier TOUS les fichiers avec Gemini</option>
+              <option value="name_only">⚡ Copie & dédoublonnage sans Gemini (0 crédit)</option>
             </select>
           </label>
           <label>
-            Cadence d'envoi
-            <select id="speedSelect">
-              <option value="fast">⚡ Rapide — Lots de 5 en parallèle (Clé facturée)</option>
-              <option value="free">🐢 Mode Gratuit — 1 fichier toutes les 5s (Max 12/min)</option>
+            Modèle Gemini
+            <select id="modelSelect">
+              <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Rapide)</option>
+              <option value="gemini-3.8-flash">gemini-3.8-flash (Haute précision)</option>
             </select>
           </label>
         </div>
 
         <div class="hint">
-          Format : <strong>04-06_au_07_2026_Nuit_Releve-Nepotu.jpg</strong> / <strong>04-06_2026_Jour_Releve-Chef-de-poste-Nicolas.jpg</strong> / <strong>Releve-Inconnu</strong> (année récupérée sur la fiche relève si absente).
+          Relèves : <strong>Chef-de-poste</strong> (Nicolas), <strong>Macia</strong>, <strong>Godini</strong>, <strong>Paladi</strong>, <strong>Beroubache</strong>, <strong>Besson</strong>, <strong>Hernandez</strong>, <strong>Potier</strong>, <strong>Ranucci</strong> • L'année/date est récupérée sur la fiche relève si absente sur votre fiche.
         </div>
 
         <div class="btn-row">
           <button class="btn-ghost" onclick="saveConfig()">💾 Sauvegarder</button>
-          <button id="testGeminiBtn" class="btn-ghost" onclick="testGeminiKey()">🧪 Tester Gemini</button>
+          <button class="btn-ghost" onclick="testGeminiKey()">🧪 Tester Gemini</button>
           <button id="connectBtn" class="btn-primary btn-grow" onclick="connectGoogle(true)">🔐 Connexion Google Drive</button>
           <button id="disconnectBtn" class="btn-ghost hidden" onclick="disconnectGoogle()">Déconnexion</button>
         </div>
@@ -324,27 +339,40 @@
       </div>
     </section>
 
-    <!-- 2. DOSSIER -->
+    <!-- 2. DOSSIERS SOURCE & DÉFINITIF -->
     <section class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-        <h2 class="card-title">📁 Dossier source Google Drive</h2>
-        <span id="folderStatusBadge" class="badge">En attente</span>
+      <h2 class="card-title">📁 Dossiers Google Drive (Source ➔ Définitif)</h2>
+
+      <div class="hint" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+        <div>
+          <strong>Source (déjà classés) :</strong> <span id="srcFolderName">Aucun</span>
+          <div id="srcFolderPath" style="font-size:0.74rem;"></div>
+        </div>
+        <div class="btn-row">
+          <button id="findSrcBtn" class="btn-ghost btn-sm" onclick="autoFindSource()" disabled>🔍 Prud'hommes</button>
+          <button id="browseSrcBtn" class="btn-ghost btn-sm" onclick="openFolderModal('source')" disabled>📂 Parcourir</button>
+        </div>
       </div>
 
       <div class="hint" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
         <div>
-          Dossier : <strong id="selectedFolderName">Aucun</strong>
-          <div id="selectedFolderPath" style="font-size:0.74rem;"></div>
+          <strong>Définitif (Année / Mois + Doublons) :</strong> <span id="dstFolderName">Aucun</span>
+          <div id="dstFolderPath" style="font-size:0.74rem;"></div>
         </div>
         <div class="btn-row">
-          <button id="autoFindBtn" class="btn-ghost btn-sm" onclick="autoFindPrudhommes()" disabled>🔍 Chercher "Prud'hommes"</button>
-          <button id="browseDriveBtn" class="btn-ghost btn-sm" onclick="openFolderModal()" disabled>📂 Parcourir</button>
+          <button id="findDstBtn" class="btn-ghost btn-sm" onclick="autoFindOrCreateDest()" disabled>🔍 Mains Courantes</button>
+          <button id="browseDstBtn" class="btn-ghost btn-sm" onclick="openFolderModal('dest')" disabled>📂 Parcourir</button>
         </div>
       </div>
 
+      <label class="checkbox-row">
+        <input type="checkbox" id="includeVerifyCheck" />
+        Inclure aussi le dossier "À vérifier" (pour récupérer les pages où l'année manquait)
+      </label>
+
       <div class="btn-row">
-        <button id="scanBtn" class="btn-primary btn-grow" onclick="scanAllSubfolders()" disabled>🔄 Scanner tous les dossiers (JPG & PDF)</button>
-        <button class="btn-ghost btn-sm" onclick="clearProcessedHistory()">🗑️ Effacer l'historique local</button>
+        <button id="scanBtn" class="btn-primary btn-grow" onclick="scanClassifiedFiles()" disabled>🔄 Scanner les fichiers</button>
+        <button class="btn-ghost btn-sm" onclick="clearProcessedHistory()">🗑️ Effacer l'historique</button>
       </div>
     </section>
 
@@ -361,13 +389,13 @@
 
       <div class="stats-grid">
         <div class="stat-box"><div id="statTotal" class="stat-val">0</div><div class="stat-lbl">Trouvés</div></div>
-        <div class="stat-box"><div id="statOk" class="stat-val" style="color:var(--success);">0</div><div class="stat-lbl">Classés</div></div>
-        <div class="stat-box"><div id="statCheck" class="stat-val" style="color:var(--warn);">0</div><div class="stat-lbl">À vérifier</div></div>
+        <div class="stat-box"><div id="statOk" class="stat-val" style="color:var(--success);">0</div><div class="stat-lbl">Copiés</div></div>
+        <div class="stat-box"><div id="statDup" class="stat-val" style="color:#c084fc;">0</div><div class="stat-lbl">Doublons</div></div>
         <div class="stat-box"><div id="statRemaining" class="stat-val" style="color:var(--primary);">0</div><div class="stat-lbl">Restants</div></div>
       </div>
 
       <div class="btn-row">
-        <button id="startBtn" class="btn-success btn-grow" onclick="startProcessing(false)" disabled>▶️ Lancer le tri</button>
+        <button id="startBtn" class="btn-success btn-grow" onclick="startProcessing(false)" disabled>▶️ Copier & Trier les doublons</button>
         <button id="testOneBtn" class="btn-ghost" onclick="startProcessing(true)" disabled>🧪 Tester 1 fichier</button>
         <button id="pauseBtn" class="btn-warn btn-grow hidden" onclick="togglePause()">⏸️ Pause</button>
       </div>
@@ -376,7 +404,7 @@
     <!-- 4. JOURNAL -->
     <section class="card">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2 class="card-title">📜 Journal (succès & erreurs)</h2>
+        <h2 class="card-title">📜 Journal (Copiés, Doublons & Erreurs)</h2>
         <span id="historyInfo" style="font-size:0.78rem; color:var(--muted);">0 en mémoire</span>
       </div>
       <div id="logList" class="log-list">
@@ -389,7 +417,7 @@
   <div id="folderModal" class="modal-backdrop hidden">
     <div class="modal">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <strong>📂 Choisir un dossier Google Drive</strong>
+        <strong id="modalTitle">📂 Choisir un dossier Google Drive</strong>
         <button class="btn-ghost btn-sm" onclick="closeFolderModal()">✕</button>
       </div>
       <div id="modalBreadcrumb" style="font-size:0.8rem; color:var(--muted);">Mon Drive</div>
@@ -402,25 +430,38 @@
   </div>
 
   <script>
-    if (window.pdfjsLib) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-    }
-
     // =====================================================================
-    // CONSTANTES & ÉTAT
+    // CONSTANTES & LISTE OFFICIELLE DES AGENTS DE RELÈVE
     // =====================================================================
     const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
+    const BATCH_SIZE = 5;
     const THUMB_MAX_PX = 1000;
     const THUMB_QUALITY = 0.6;
     const EXPORT_MAX_PX = 2000;
     const EXPORT_QUALITY = 0.85;
 
+    const MONTH_FOLDERS = [
+      "",
+      "01 - Janvier", "02 - Février", "03 - Mars", "04 - Avril",
+      "05 - Mai", "06 - Juin", "07 - Juillet", "08 - Août",
+      "09 - Septembre", "10 - Octobre", "11 - Novembre", "12 - Décembre"
+    ];
+
+    const MONTH_WORD_TO_NUM = {
+      janvier: 1, fevrier: 2, mars: 3, avril: 4, mai: 5, juin: 6,
+      juillet: 7, aout: 8, septembre: 9, octobre: 10, novembre: 11, decembre: 12
+    };
+
+    const ROSTER_SURNAMES = [
+      "Macia", "Godini", "Paladi", "Beroubache",
+      "Besson", "Hernandez", "Potier", "Ranucci"
+    ];
+
     const STORAGE_KEYS = {
       config: "mc_sorter_config_v1",
-      folder: "mc_sorter_folder_v2",
-      processed: "mc_sorter_processed_v1",
-      uploaded: "mc_sorter_uploaded_v1"
+      srcFolder: "mc_sorter_folder_v2",
+      dstFolder: "mc_sorter_dest_folder_v1",
+      processed: "mc_sorter_stage2_processed_v1"
     };
 
     const state = {
@@ -429,31 +470,34 @@
       tokenExpiresAt: 0,
       gisReady: false,
 
-      selectedFolder: null,
+      srcFolder: null,
+      dstFolder: null,
+
       subfolderCache: {},
       subfolderInFlight: {},
       folderFilesCache: {},
       folderFilesInFlight: {},
 
+      destShifts: {},
+      shiftLocks: {},
+
       sourceFiles: [],
       processedMap: {},
-      uploadedIds: {},
       recentErrors: [],
 
       isRunning: false,
       isPaused: false
     };
 
-    const modalNav = { stack: [{ id: "root", name: "Mon Drive" }] };
+    const modalNav = { target: "source", stack: [{ id: "root", name: "Mon Drive" }] };
 
     // =====================================================================
     // INITIALISATION
     // =====================================================================
     window.addEventListener("DOMContentLoaded", () => {
       loadConfig();
-      loadSavedFolder();
+      loadSavedFolders();
       loadProcessedMap();
-      loadUploadedIds();
       renderStats();
       renderLogs();
       waitForGisAndAutoConnect();
@@ -466,58 +510,50 @@
         const cfg = JSON.parse(raw);
         if (cfg.clientId) document.getElementById("clientIdInput").value = cfg.clientId;
         if (cfg.geminiKey) document.getElementById("geminiKeyInput").value = cfg.geminiKey;
-        const sel = document.getElementById("modelSelect");
-        if (cfg.model && [...sel.options].some(o => o.value === cfg.model)) sel.value = cfg.model;
-        if (cfg.speed) document.getElementById("speedSelect").value = cfg.speed;
-      } catch (e) {}
+        const mSel = document.getElementById("modelSelect");
+        if (cfg.model && [...mSel.options].some(o => o.value === cfg.model)) mSel.value = cfg.model;
+        const modeSel = document.getElementById("modeSelect");
+        if (cfg.stage2Mode && [...modeSel.options].some(o => o.value === cfg.stage2Mode)) modeSel.value = cfg.stage2Mode;
+      } catch {}
     }
 
     function saveConfig(silent = false) {
+      let existing = {};
+      try { existing = JSON.parse(localStorage.getItem(STORAGE_KEYS.config) || "{}"); } catch {}
       const cfg = {
+        ...existing,
         clientId: document.getElementById("clientIdInput").value.trim(),
         geminiKey: document.getElementById("geminiKeyInput").value.trim(),
         model: document.getElementById("modelSelect").value,
-        speed: document.getElementById("speedSelect").value
+        stage2Mode: document.getElementById("modeSelect").value
       };
       localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(cfg));
       if (!silent) alert("Configuration sauvegardée.");
       return cfg;
     }
 
-    function loadSavedFolder() {
+    function loadSavedFolders() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEYS.folder);
-        if (raw) {
-          state.selectedFolder = JSON.parse(raw);
-          updateFolderUI();
-        }
-      } catch (e) {}
+        const s = localStorage.getItem(STORAGE_KEYS.srcFolder);
+        if (s) state.srcFolder = JSON.parse(s);
+        const d = localStorage.getItem(STORAGE_KEYS.dstFolder);
+        if (d) state.dstFolder = JSON.parse(d);
+      } catch {}
+      updateFolderUI();
     }
 
     function loadProcessedMap() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEYS.processed);
-        state.processedMap = raw ? JSON.parse(raw) : {};
-      } catch (e) { state.processedMap = {}; }
+        state.processedMap = JSON.parse(localStorage.getItem(STORAGE_KEYS.processed) || "{}");
+      } catch { state.processedMap = {}; }
     }
 
     function saveProcessedMap() {
       localStorage.setItem(STORAGE_KEYS.processed, JSON.stringify(state.processedMap));
     }
 
-    function loadUploadedIds() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEYS.uploaded);
-        state.uploadedIds = raw ? JSON.parse(raw) : {};
-      } catch (e) { state.uploadedIds = {}; }
-    }
-
-    function saveUploadedIds() {
-      localStorage.setItem(STORAGE_KEYS.uploaded, JSON.stringify(state.uploadedIds));
-    }
-
     function clearProcessedHistory() {
-      if (!confirm("Effacer l'historique local des fichiers déjà traités ? (Aucun fichier Drive ne sera supprimé.)")) return;
+      if (!confirm("Effacer l'historique local de cette étape ? (Aucun fichier Drive ne sera supprimé.)")) return;
       state.processedMap = {};
       state.recentErrors = [];
       saveProcessedMap();
@@ -526,52 +562,45 @@
     }
 
     // =====================================================================
-    // TEST RAPIDE CLÉ GEMINI
+    // TEST GEMINI
     // =====================================================================
     async function testGeminiKey() {
       const cfg = saveConfig(true);
       const hint = document.getElementById("geminiStatusHint");
       hint.classList.remove("hidden");
-
       if (!cfg.geminiKey) {
         hint.textContent = "❌ Veuillez coller votre clé API Gemini d'abord.";
         return;
       }
-
-      hint.textContent = `⏳ Test de ${cfg.model} en cours...`;
+      hint.textContent = `⏳ Test de ${cfg.model}...`;
       try {
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`;
         const res = await fetch(endpoint, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": cfg.geminiKey
-          },
+          headers: { "Content-Type": "application/json", "x-goog-api-key": cfg.geminiKey },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: "Réponds uniquement OK" }] }],
+            contents: [{ parts: [{ text: "Réponds OK" }] }],
             generationConfig: getThinkingConfig(cfg.model)
           })
         });
         const data = await res.json();
         if (!res.ok) {
-          const msg = data?.error?.message || JSON.stringify(data);
-          hint.textContent = `❌ Erreur Gemini (${res.status}) : ${msg}`;
+          hint.textContent = `❌ Erreur Gemini (${res.status}) : ${data?.error?.message || JSON.stringify(data)}`;
           return;
         }
-        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "OK";
-        hint.textContent = `🟢 Gemini prêt (${cfg.model}) : "${reply.trim()}"`;
+        hint.textContent = `🟢 Gemini prêt (${cfg.model})`;
       } catch (err) {
-        hint.textContent = `❌ Erreur réseau Gemini : ${err.message}`;
+        hint.textContent = `❌ Erreur réseau : ${err.message}`;
       }
     }
 
     // =====================================================================
-    // GOOGLE OAUTH AUTOMATIQUE
+    // OAUTH GOOGLE
     // =====================================================================
     function waitForGisAndAutoConnect() {
-      const timer = setInterval(() => {
+      const t = setInterval(() => {
         if (window.google?.accounts?.oauth2) {
-          clearInterval(timer);
+          clearInterval(t);
           state.gisReady = true;
           const cfg = saveConfig(true);
           if (cfg.clientId) {
@@ -594,7 +623,7 @@
     function requestTokenPromise(promptMode) {
       return new Promise((resolve, reject) => {
         if (!state.tokenClient) return reject(new Error("Client OAuth non initialisé."));
-        state.tokenClient.callback = (resp) => {
+        state.tokenClient.callback = resp => {
           if (resp.error) return reject(new Error(resp.error_description || resp.error));
           state.accessToken = resp.access_token;
           state.tokenExpiresAt = Date.now() + Number(resp.expires_in || 3600) * 1000;
@@ -606,29 +635,21 @@
     }
 
     async function ensureValidToken() {
-      if (state.accessToken && Date.now() < state.tokenExpiresAt - 120_000) {
-        return state.accessToken;
-      }
+      if (state.accessToken && Date.now() < state.tokenExpiresAt - 120_000) return state.accessToken;
       if (!tokenRefreshPromise) {
         tokenRefreshPromise = requestTokenPromise("").finally(() => { tokenRefreshPromise = null; });
       }
-      try {
-        return await tokenRefreshPromise;
-      } catch {
-        throw new Error("Session Google expirée. Cliquez sur 'Connexion Google Drive' puis reprenez.");
-      }
+      try { return await tokenRefreshPromise; }
+      catch { throw new Error("Session Google expirée. Reconnectez-vous."); }
     }
 
     async function connectGoogle(interactive = true) {
       const cfg = saveConfig(true);
-      if (!cfg.clientId) return alert("Veuillez renseigner votre Google OAuth Client ID.");
-      if (!state.gisReady) return alert("Chargement Google OAuth en cours, réessayez dans 1 seconde.");
+      if (!cfg.clientId) return alert("Renseignez votre Google OAuth Client ID.");
+      if (!state.gisReady) return alert("Chargement Google OAuth en cours...");
       initTokenClient(cfg.clientId);
-      try {
-        await requestTokenPromise(interactive ? "consent" : "");
-      } catch (err) {
-        setAuthBadge("err", "🔴 Échec connexion : " + err.message);
-      }
+      try { await requestTokenPromise(interactive ? "consent" : ""); }
+      catch (err) { setAuthBadge("err", "🔴 Échec connexion : " + err.message); }
     }
 
     function disconnectGoogle() {
@@ -639,33 +660,24 @@
       state.tokenExpiresAt = 0;
       setAuthBadge("", "⚪ Non connecté");
       document.getElementById("disconnectBtn").classList.add("hidden");
-      document.getElementById("autoFindBtn").disabled = true;
-      document.getElementById("browseDriveBtn").disabled = true;
-      document.getElementById("scanBtn").disabled = true;
+      ["findSrcBtn", "browseSrcBtn", "findDstBtn", "browseDstBtn", "scanBtn"].forEach(id => {
+        document.getElementById(id).disabled = true;
+      });
     }
 
     async function onAuthenticated() {
       setAuthBadge("ok", "🟢 Connecté");
       document.getElementById("disconnectBtn").classList.remove("hidden");
-      document.getElementById("autoFindBtn").disabled = false;
-      document.getElementById("browseDriveBtn").disabled = false;
-      document.getElementById("scanBtn").disabled = !state.selectedFolder;
-
-      if (!state.selectedFolder) {
-        await autoFindPrudhommes();
-      } else {
-        setFolderBadge("ok", "✅ Dossier prêt");
-      }
+      ["findSrcBtn", "browseSrcBtn", "findDstBtn", "browseDstBtn"].forEach(id => {
+        document.getElementById(id).disabled = false;
+      });
+      if (!state.srcFolder) await autoFindSource();
+      if (!state.dstFolder) await autoFindOrCreateDest();
+      updateFolderUI();
     }
 
     function setAuthBadge(type, text) {
       const el = document.getElementById("authBadge");
-      el.className = "badge" + (type ? " " + type : "");
-      el.textContent = text;
-    }
-
-    function setFolderBadge(type, text) {
-      const el = document.getElementById("folderStatusBadge");
       el.className = "badge" + (type ? " " + type : "");
       el.textContent = text;
     }
@@ -680,12 +692,12 @@
       const res = await fetch(url, { ...options, headers });
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Drive (${res.status}): ${text.slice(0, 220)}`);
+        throw new Error(`Drive (${res.status}): ${text.slice(0, 200)}`);
       }
       return res;
     }
 
-    async function driveListAll(query, fields = "files(id,name,mimeType,appProperties)") {
+    async function driveListAll(query, fields = "files(id,name,mimeType,parents,appProperties)") {
       const items = [];
       let pageToken = null;
       do {
@@ -705,51 +717,72 @@
       return items;
     }
 
-    function normalizeFolderName(name) {
-      return (name || "").toLowerCase().replace(/[’']/g, "'").trim();
+    function normFolder(s) {
+      return stripAccents(s || "").toLowerCase().replace(/[’']/g, "'").trim();
     }
 
-    async function autoFindPrudhommes() {
-      setFolderBadge("warn", "🔍 Recherche...");
-      try {
-        const allFolders = await driveListAll(
-          `mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-          "files(id,name,parents)"
-        );
-
-        const matches = allFolders.filter(f => {
-          const n = normalizeFolderName(f.name);
-          return n.includes("prud'homme") || n.includes("prudhomme");
-        });
-
-        if (matches.length > 0) {
-          matches.sort((a, b) => a.name.length - b.name.length);
-          const target = matches[0];
-          setSelectedFolder(target.id, target.name, "Mon Drive / " + target.name);
-          setFolderBadge("ok", "✅ Dossier trouvé");
-        } else {
-          setFolderBadge("warn", "⚠️ Utilisez Parcourir");
-        }
-      } catch (err) {
-        setFolderBadge("err", "❌ " + err.message);
+    async function autoFindSource() {
+      const folders = await driveListAll(
+        `mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        "files(id,name,parents)"
+      );
+      const match = folders.find(f => {
+        const n = normFolder(f.name);
+        return n.includes("prud'homme") || n.includes("prudhomme");
+      });
+      if (match) {
+        setFolder("source", match.id, match.name, "Mon Drive / " + match.name);
       }
     }
 
-    function setSelectedFolder(id, name, path) {
-      state.selectedFolder = { id, name, path };
-      localStorage.setItem(STORAGE_KEYS.folder, JSON.stringify(state.selectedFolder));
+    async function autoFindOrCreateDest() {
+      const rootFolders = await driveListAll(
+        `'root' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        "files(id,name)"
+      );
+      let match = rootFolders.find(f => normFolder(f.name) === "mains courantes");
+      if (!match) {
+        const res = await driveFetch("https://www.googleapis.com/drive/v3/files?fields=id,name", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: "Mains Courantes",
+            mimeType: "application/vnd.google-apps.folder",
+            parents: ["root"]
+          })
+        });
+        match = await res.json();
+      }
+      if (match) {
+        setFolder("dest", match.id, match.name, "Mon Drive / " + match.name);
+      }
+    }
+
+    function setFolder(kind, id, name, path) {
+      const obj = { id, name, path };
+      if (kind === "source") {
+        state.srcFolder = obj;
+        localStorage.setItem(STORAGE_KEYS.srcFolder, JSON.stringify(obj));
+      } else {
+        state.dstFolder = obj;
+        localStorage.setItem(STORAGE_KEYS.dstFolder, JSON.stringify(obj));
+      }
       updateFolderUI();
-      if (state.accessToken) document.getElementById("scanBtn").disabled = false;
     }
 
     function updateFolderUI() {
-      const f = state.selectedFolder;
-      document.getElementById("selectedFolderName").textContent = f ? f.name : "Aucun";
-      document.getElementById("selectedFolderPath").textContent = f ? f.path : "";
+      document.getElementById("srcFolderName").textContent = state.srcFolder ? state.srcFolder.name : "Aucun";
+      document.getElementById("srcFolderPath").textContent = state.srcFolder ? state.srcFolder.path : "";
+      document.getElementById("dstFolderName").textContent = state.dstFolder ? state.dstFolder.name : "Aucun";
+      document.getElementById("dstFolderPath").textContent = state.dstFolder ? state.dstFolder.path : "";
+      document.getElementById("scanBtn").disabled = !(state.accessToken && state.srcFolder && state.dstFolder);
     }
 
-    async function openFolderModal() {
+    async function openFolderModal(target) {
+      modalNav.target = target;
       modalNav.stack = [{ id: "root", name: "Mon Drive" }];
+      document.getElementById("modalTitle").textContent =
+        target === "source" ? "📂 Dossier SOURCE (déjà classés)" : "📂 Dossier DÉFINITIF (Mains Courantes)";
       document.getElementById("folderModal").classList.remove("hidden");
       await loadModalFolder("root");
     }
@@ -773,10 +806,7 @@
         const row = document.createElement("div");
         row.className = "folder-row";
         row.innerHTML = `<span>📁 ${escapeHtml(f.name)}</span><span style="color:var(--muted);">Ouvrir ›</span>`;
-        row.onclick = () => {
-          modalNav.stack.push({ id: f.id, name: f.name });
-          loadModalFolder(f.id);
-        };
+        row.onclick = () => { modalNav.stack.push({ id: f.id, name: f.name }); loadModalFolder(f.id); };
         listEl.appendChild(row);
       }
     }
@@ -789,92 +819,255 @@
 
     function selectCurrentModalFolder() {
       const current = modalNav.stack[modalNav.stack.length - 1];
-      setSelectedFolder(current.id, current.name, modalNav.stack.map(s => s.name).join(" / "));
-      setFolderBadge("ok", "✅ Sélectionné");
+      setFolder(modalNav.target, current.id, current.name, modalNav.stack.map(s => s.name).join(" / "));
       closeFolderModal();
     }
 
     // =====================================================================
-    // SCAN RÉCURSIF (JPG, JPEG, PNG, PDF)
+    // CORRESPONDANCE AVANCÉE DES AGENTS DE RELÈVE (LISTE OFFICIELLE)
     // =====================================================================
-    function isSupportedSourceFile(file) {
-      const mime = (file.mimeType || "").toLowerCase();
-      if (mime.startsWith("application/vnd.google-apps.")) return false;
-      if (file.appProperties?.mcSorted === "1") return false;
-      if (state.uploadedIds[file.id]) return false;
-
-      const name = file.name || "";
-      if (/^\d{2}-\d{2}(?:_au_(?:\d{2}-)?\d{2})?(?:_\d{4})?_\d{4}_.+\.jpg$/i.test(name)) return false;
-      if (/^\d{2}-\d{2}_(?:au_(?:\d{2}-)?\d{2}_)?\d{4}_.+\.jpg$/i.test(name)) return false;
-      if (/^\d{2}-\d{2}-\d{4} - [^/]+\.jpg$/i.test(name)) return false;
-      if (/^(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre) \d{2} \d{4} relève .+\.jpg$/i.test(name)) return false;
-
-      const nameMatch = /\.(jpe?g|png|pdf)$/i.test(name);
-      const mimeMatch = ["image/jpeg", "image/jpg", "image/png", "application/pdf"].includes(mime);
-      return nameMatch || mimeMatch;
+    function stripAccents(str) {
+      return (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
 
-    async function scanAllSubfolders() {
-      if (!state.selectedFolder) return;
+    function sanitizePart(str) {
+      return (str || "").replace(/[\/\\:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
+    }
+
+    function phoneticNorm(s) {
+      return stripAccents(s || "")
+        .toLowerCase()
+        .replace(/^h/, "")
+        .replace(/ph/g, "f")
+        .replace(/([a-z])\1+/g, "$1")
+        .replace(/ou/g, "u")
+        .replace(/au/g, "o")
+        .replace(/eau/g, "o")
+        .replace(/[sz]$/g, "");
+    }
+
+    function levenshtein(a, b) {
+      const m = a.length, n = b.length;
+      const dp = Array.from({ length: m + 1 }, (_, i) => [i]);
+      for (let j = 1; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,
+            dp[i][j - 1] + 1,
+            dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+          );
+        }
+      }
+      return dp[m][n];
+    }
+
+    function canonicalizeRelief(raw) {
+      const cleaned = sanitizePart(raw);
+      const low = stripAccents(cleaned).toLowerCase().replace(/[-_]+/g, " ").trim();
+
+      if (!low || low === "inconnu" || low === "inconnue" || low.includes("bedouet") || low === "guillaume") {
+        return { canonical: "Inconnu", inRoster: false, known: false };
+      }
+
+      // Chef de poste (Nicolas / Chef de Nicolas / Chef de poste / CDP)
+      if (
+        low.includes("chef") || low.includes("nicolas") ||
+        /\bcdp\b/.test(low) || low.includes("poste")
+      ) {
+        return { canonical: "Chef-de-poste", inRoster: true, known: true };
+      }
+
+      // Prénoms uniques de la liste (hors Adrien qui correspond à Hernandez ET Ranucci)
+      const uniqueFirstNames = [
+        ["didier", "Macia"],
+        ["laurent", "Godini"],
+        ["vasile", "Paladi"],
+        ["vasili", "Paladi"],
+        ["anthony", "Beroubache"],
+        ["cedric", "Besson"],
+        ["florian", "Potier"]
+      ];
+      for (const [fn, surname] of uniqueFirstNames) {
+        if (low.includes(fn)) return { canonical: surname, inRoster: true, known: true };
+      }
+
+      // Correspondance directe + variantes + distance phonétique/orthographique
+      const tokens = low.split(/\s+/);
+      let bestCandidate = null;
+      let bestScore = Infinity;
+
+      for (const surname of ROSTER_SURNAMES) {
+        const sLow = surname.toLowerCase();
+        if (low.includes(sLow)) return { canonical: surname, inRoster: true, known: true };
+
+        const sPhon = phoneticNorm(sLow);
+        for (const tok of tokens) {
+          if (tok.length < 4) continue;
+          const distRaw = levenshtein(tok, sLow);
+          const distPhon = levenshtein(phoneticNorm(tok), sPhon);
+          const minD = Math.min(distRaw, distPhon);
+          const maxAllowed = sLow.length >= 7 ? 2 : 1;
+
+          if (minD <= maxAllowed && minD < bestScore) {
+            bestScore = minD;
+            bestCandidate = surname;
+          }
+        }
+      }
+
+      if (bestCandidate) {
+        return { canonical: bestCandidate, inRoster: true, known: true };
+      }
+
+      // Autre nom lisible hors liste
+      const title = cleaned
+        .toLowerCase()
+        .replace(/(^|[\s-])([a-zàâäéèêëîïôöùûüç])/g, (m, sep, ch) => sep + ch.toUpperCase())
+        .replace(/\s+/g, "-");
+      return { canonical: title || "Inconnu", inRoster: false, known: Boolean(title) };
+    }
+
+    // =====================================================================
+    // PARSING DES FICHIERS DÉJÀ CLASSÉS
+    // =====================================================================
+    const pad2 = n => String(n).padStart(2, "0");
+
+    function normalizeYear(y) {
+      if (Number.isInteger(y) && y >= 20 && y <= 30) return 2000 + y;
+      return y;
+    }
+
+    function isValidDate(y, m, d) {
+      y = normalizeYear(y);
+      if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return false;
+      if (y < 2020 || y > 2030 || m < 1 || m > 12 || d < 1 || d > 31) return false;
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+    }
+
+    function parseClassifiedFilename(filename) {
+      const name = (filename || "").trim();
+
+      let m = name.match(/^(\d{2})-(\d{2})(?:_au_(?:(\d{2})-)?(\d{2}))?_(\d{4})_(Jour|Nuit|Jour-et-Nuit|Vacation-Inconnue)_Releve-(.+)\.(jpe?g|png)$/i);
+      if (m) {
+        const sm = parseInt(m[1], 10), sd = parseInt(m[2], 10);
+        const em = m[3] ? parseInt(m[3], 10) : (m[4] ? sm : 0);
+        const ed = m[4] ? parseInt(m[4], 10) : 0;
+        const sy = parseInt(m[5], 10);
+        return {
+          startYear: sy, startMonth: sm, startDay: sd,
+          endYear: em ? sy : 0, endMonth: em, endDay: ed,
+          shiftType: m[6],
+          reliefRaw: m[7].replace(/\s*\(\d+\)$/, "")
+        };
+      }
+
+      m = name.match(/^(\d{2})-(\d{2})-(\d{4})\s*-\s*Rel[eè]ve\s+(.+?)\s*-\s*(Jour et Nuit|Jour|Nuit)\.(jpe?g|png)$/i);
+      if (m) {
+        return {
+          startYear: parseInt(m[3], 10), startMonth: parseInt(m[1], 10), startDay: parseInt(m[2], 10),
+          endYear: 0, endMonth: 0, endDay: 0,
+          shiftType: m[5].replace(/\s+/g, "-"),
+          reliefRaw: m[4].replace(/\s*\(\d+\)$/, "")
+        };
+      }
+
+      m = name.match(/^(\d{2})-(\d{2})-(\d{4})\s*-\s*(.+)\.(jpe?g|png)$/i);
+      if (m) {
+        return {
+          startYear: parseInt(m[3], 10), startMonth: parseInt(m[1], 10), startDay: parseInt(m[2], 10),
+          endYear: 0, endMonth: 0, endDay: 0,
+          shiftType: "Vacation-Inconnue",
+          reliefRaw: m[4].replace(/\s*\(\d+\)$/, "")
+        };
+      }
+
+      m = name.match(/^([a-zàâäéèêëîïôöùûüç]+)\s+(\d{2})\s+(\d{4})\s+rel[eè]ve\s+(.+?)(?:\s+(jour et nuit|jour|nuit))?\.(jpe?g|png)$/i);
+      if (m) {
+        const monNum = MONTH_WORD_TO_NUM[stripAccents(m[1]).toLowerCase()];
+        if (monNum) {
+          const sh = m[5] ? (m[5][0].toUpperCase() + m[5].slice(1).toLowerCase().replace(/\s+/g, "-")) : "Vacation-Inconnue";
+          return {
+            startYear: parseInt(m[3], 10), startMonth: monNum, startDay: parseInt(m[2], 10),
+            endYear: 0, endMonth: 0, endDay: 0,
+            shiftType: sh,
+            reliefRaw: m[4].replace(/\s*\(\d+\)$/, "")
+          };
+        }
+      }
+
+      return null;
+    }
+
+    // =====================================================================
+    // SCAN DES FICHIERS DÉJÀ CLASSÉS (+ OPTION "À VÉRIFIER")
+    // =====================================================================
+    async function scanClassifiedFiles() {
+      if (!state.srcFolder || !state.dstFolder) return;
       const scanBtn = document.getElementById("scanBtn");
       scanBtn.disabled = true;
-      setProgressStatus("Scan récursif de tous les dossiers...");
+      const includeVerify = document.getElementById("includeVerifyCheck").checked;
+      setProgressStatus("Scan des fichiers en cours...");
 
       try {
-        const rootId = state.selectedFolder.id;
-        const folderQueue = [{ id: rootId, path: state.selectedFolder.name }];
-        const visitedFolders = new Set([rootId]);
-        const foundFiles = [];
-        let scannedFolderCount = 0;
+        const rootId = state.srcFolder.id;
+        const queue = [{ id: rootId, path: state.srcFolder.name, inYearFolder: false, inVerifyFolder: false }];
+        const visited = new Set([rootId]);
+        const found = [];
 
-        while (folderQueue.length > 0) {
-          const current = folderQueue.shift();
-          scannedFolderCount++;
-
+        while (queue.length > 0) {
+          const cur = queue.shift();
           const children = await driveListAll(
-            `'${current.id}' in parents and trashed = false`,
-            "files(id,name,mimeType,appProperties)"
+            `'${cur.id}' in parents and trashed = false`,
+            "files(id,name,mimeType)"
           );
 
           for (const item of children) {
             if (item.mimeType === "application/vnd.google-apps.folder") {
-              if (item.name === "À vérifier") continue;
-              if (!visitedFolders.has(item.id)) {
-                visitedFolders.add(item.id);
-                folderQueue.push({ id: item.id, path: `${current.path}/${item.name}` });
+              if (item.name === "Doublons") continue;
+              const isVerify = item.name === "À vérifier";
+              if (isVerify && !includeVerify) continue;
+
+              if (!visited.has(item.id)) {
+                visited.add(item.id);
+                const isYear = /^202[0-9]$/.test(item.name.trim());
+                queue.push({
+                  id: item.id,
+                  path: `${cur.path}/${item.name}`,
+                  inYearFolder: cur.inYearFolder || isYear,
+                  inVerifyFolder: cur.inVerifyFolder || isVerify
+                });
               }
-            } else if (isSupportedSourceFile(item)) {
-              foundFiles.push({
-                ...item,
-                folderPath: current.path,
-                isPdf: (item.mimeType || "").toLowerCase() === "application/pdf" || /\.pdf$/i.test(item.name || "")
-              });
+            } else if (/\.(jpe?g|png)$/i.test(item.name || "")) {
+              const parsed = parseClassifiedFilename(item.name);
+              if (cur.inYearFolder || parsed || (includeVerify && cur.inVerifyFolder)) {
+                found.push({
+                  ...item,
+                  folderPath: cur.path,
+                  fromVerify: cur.inVerifyFolder,
+                  parsed
+                });
+              }
             }
           }
-
-          setProgressStatus(`🔍 ${scannedFolderCount} dossier(s) — ${foundFiles.length} fichier(s) JPG/PDF trouvé(s)...`);
+          setProgressStatus(`🔍 ${found.length} fichier(s) trouvé(s)...`);
         }
 
-        foundFiles.sort((a, b) => (a.folderPath + "/" + a.name).localeCompare(b.folderPath + "/" + b.name, "fr"));
-        state.sourceFiles = foundFiles;
-
-        await refreshSubfolderCache(rootId);
+        found.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+        state.sourceFiles = found;
         renderStats();
 
         const remaining = getRemainingFiles().length;
         document.getElementById("startBtn").disabled = remaining === 0;
         document.getElementById("testOneBtn").disabled = remaining === 0;
-
-        const pdfCount = foundFiles.filter(f => f.isPdf).length;
-        const imgCount = foundFiles.length - pdfCount;
         setProgressStatus(
           remaining > 0
-            ? `Prêt : ${remaining} restant(s) sur ${foundFiles.length} (${imgCount} images, ${pdfCount} PDF)`
-            : `Terminé : les ${foundFiles.length} fichier(s) sont déjà traités !`
+            ? `Prêt : ${remaining} fichier(s) à transférer vers Mains Courantes`
+            : `Tout est déjà transféré (${found.length} fichiers) !`
         );
       } catch (err) {
-        alert("Erreur lors du scan : " + err.message);
-        setProgressStatus("Erreur de scan");
+        alert("Erreur scan : " + err.message);
       } finally {
         scanBtn.disabled = false;
       }
@@ -884,6 +1077,52 @@
       return state.sourceFiles.filter(f => !state.processedMap[f.id]);
     }
 
+    // =====================================================================
+    // INDEXATION PRÉALABLE DE "MAINS COURANTES" POUR DÉTECTION DES DOUBLONS
+    // =====================================================================
+    function buildShiftKey(sy, sm, sd, shiftType) {
+      return `${sy}-${pad2(sm)}-${pad2(sd)}_${shiftType}`;
+    }
+
+    async function indexExistingDestShifts() {
+      setProgressStatus("Indexation des fichiers déjà présents dans Mains Courantes...");
+      state.destShifts = {};
+      const dstId = state.dstFolder.id;
+
+      await refreshSubfolderCache(dstId);
+      const yearNames = Object.keys(state.subfolderCache[dstId] || {}).filter(n => /^202[0-9]$/.test(n));
+
+      for (const yName of yearNames) {
+        const yId = state.subfolderCache[dstId][yName];
+        await refreshSubfolderCache(yId);
+        const monthFolders = Object.entries(state.subfolderCache[yId] || {});
+
+        for (const [, mId] of monthFolders) {
+          const files = await driveListAll(
+            `'${mId}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
+            "files(id,name)"
+          );
+          state.folderFilesCache[mId] = new Set(files.map(f => f.name));
+
+          for (const f of files) {
+            const p = parseClassifiedFilename(f.name);
+            if (!p || !isValidDate(p.startYear, p.startMonth, p.startDay)) continue;
+            const sk = buildShiftKey(p.startYear, p.startMonth, p.startDay, p.shiftType);
+            const rel = canonicalizeRelief(p.reliefRaw);
+            state.destShifts[sk] = {
+              fileId: f.id,
+              folderId: mId,
+              name: f.name,
+              isKnownRelief: rel.known
+            };
+          }
+        }
+      }
+    }
+
+    // =====================================================================
+    // GESTION CONCURRENTE DES DOSSIERS ANNÉE / MOIS / DOUBLONS
+    // =====================================================================
     async function refreshSubfolderCache(parentId) {
       const subfolders = await driveListAll(
         `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
@@ -893,9 +1132,21 @@
       for (const sf of subfolders) state.subfolderCache[parentId][sf.name] = sf.id;
     }
 
-    async function ensureSubfolder(parentId, folderName) {
+    async function ensureSubfolder(parentId, folderName, monthNum = 0) {
       if (!state.subfolderCache[parentId]) await refreshSubfolderCache(parentId);
-      if (state.subfolderCache[parentId][folderName]) return state.subfolderCache[parentId][folderName];
+      const cache = state.subfolderCache[parentId];
+
+      if (cache[folderName]) return cache[folderName];
+
+      if (monthNum >= 1 && monthNum <= 12) {
+        const targetWord = stripAccents(MONTH_FOLDERS[monthNum].split(" - ")[1]).toLowerCase();
+        for (const [existingName, existingId] of Object.entries(cache)) {
+          const n = stripAccents(existingName).toLowerCase();
+          if (n === targetWord || n.startsWith(pad2(monthNum) + " ") || n === String(monthNum) || n === pad2(monthNum)) {
+            return existingId;
+          }
+        }
+      }
 
       const lockKey = `${parentId}:${folderName}`;
       if (state.subfolderInFlight[lockKey]) return state.subfolderInFlight[lockKey];
@@ -919,7 +1170,6 @@
           delete state.subfolderInFlight[lockKey];
         }
       })();
-
       return state.subfolderInFlight[lockKey];
     }
 
@@ -931,152 +1181,83 @@
             "files(name)"
           ).then(existing => {
             state.folderFilesCache[targetFolderId] = new Set(existing.map(x => x.name));
-          }).finally(() => {
-            delete state.folderFilesInFlight[targetFolderId];
-          });
+          }).finally(() => { delete state.folderFilesInFlight[targetFolderId]; });
         }
         await state.folderFilesInFlight[targetFolderId];
       }
 
-      const existingSet = state.folderFilesCache[targetFolderId];
-      if (!existingSet.has(desiredName)) {
-        existingSet.add(desiredName);
+      const set = state.folderFilesCache[targetFolderId];
+      if (!set.has(desiredName)) {
+        set.add(desiredName);
         return desiredName;
       }
-      const dotIdx = desiredName.lastIndexOf(".");
-      const base = dotIdx > 0 ? desiredName.slice(0, dotIdx) : desiredName;
-      const ext = dotIdx > 0 ? desiredName.slice(dotIdx) : "";
+      const dot = desiredName.lastIndexOf(".");
+      const base = dot > 0 ? desiredName.slice(0, dot) : desiredName;
+      const ext = dot > 0 ? desiredName.slice(dot) : "";
       let n = 2;
-      while (existingSet.has(`${base} (${n})${ext}`)) n++;
+      while (set.has(`${base} (${n})${ext}`)) n++;
       const unique = `${base} (${n})${ext}`;
-      existingSet.add(unique);
+      set.add(unique);
       return unique;
+    }
+
+    async function driveCopyFile(sourceFileId, newName, targetFolderId) {
+      const res = await driveFetch(
+        `https://www.googleapis.com/drive/v3/files/${sourceFileId}/copy?supportsAllDrives=true&fields=id,name,webViewLink`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: newName,
+            parents: [targetFolderId],
+            appProperties: { mcSorted: "1" }
+          })
+        }
+      );
+      return res.json();
+    }
+
+    async function driveMoveFile(fileId, fromFolderId, toFolderId, newName) {
+      const params = new URLSearchParams({
+        addParents: toFolderId,
+        removeParents: fromFolderId,
+        supportsAllDrives: "true",
+        fields: "id,name,webViewLink"
+      });
+      const res = await driveFetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?${params.toString()}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newName ? { name: newName } : {})
+        }
+      );
+      return res.json();
     }
 
     async function uploadJpegToDrive(blob, fileName, parentFolderId) {
       const boundary = "mc_b_" + Math.random().toString(36).slice(2);
       const metadata = JSON.stringify({
-        name: fileName,
-        parents: [parentFolderId],
-        mimeType: "image/jpeg",
+        name: fileName, parents: [parentFolderId], mimeType: "image/jpeg",
         appProperties: { mcSorted: "1" }
       });
       const body = new Blob([
         `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
         `--${boundary}\r\nContent-Type: image/jpeg\r\n\r\n`,
-        blob,
-        `\r\n--${boundary}--`
+        blob, `\r\n--${boundary}--`
       ], { type: `multipart/related; boundary=${boundary}` });
 
       const res = await driveFetch(
         "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink",
         { method: "POST", body }
       );
-      const created = await res.json();
-      if (created?.id) {
-        state.uploadedIds[created.id] = true;
-        saveUploadedIds();
-      }
-      return created;
+      return res.json();
     }
 
     // =====================================================================
-    // DÉCODAGE & CANVAS (1000px / 0.6 -> GEMINI, 2000px / 0.85 -> DRIVE)
-    // =====================================================================
-    async function decodeImageBlob(blob) {
-      try {
-        const bmp = await createImageBitmap(blob);
-        return { source: bmp, width: bmp.width, height: bmp.height, close: () => bmp.close() };
-      } catch {
-        const url = URL.createObjectURL(blob);
-        const img = await new Promise((resolve, reject) => {
-          const el = new Image();
-          el.onload = () => resolve(el);
-          el.onerror = () => reject(new Error("Image illisible ou corrompue"));
-          el.src = url;
-        });
-        return {
-          source: img,
-          width: img.naturalWidth,
-          height: img.naturalHeight,
-          close: () => URL.revokeObjectURL(url)
-        };
-      }
-    }
-
-    function canvasToThumbBase64(source, srcW, srcH) {
-      const scale = Math.min(1, THUMB_MAX_PX / Math.max(srcW, srcH));
-      const w = Math.max(1, Math.round(srcW * scale));
-      const h = Math.max(1, Math.round(srcH * scale));
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext("2d").drawImage(source, 0, 0, w, h);
-      const b64 = canvas.toDataURL("image/jpeg", THUMB_QUALITY).split(",")[1];
-      canvas.width = 0;
-      canvas.height = 0;
-      return b64;
-    }
-
-    async function rotateAndExportJpeg(source, srcW, srcH, clockwiseDeg) {
-      const scale = Math.min(1, EXPORT_MAX_PX / Math.max(srcW, srcH));
-      let w = Math.max(1, Math.round(srcW * scale));
-      let h = Math.max(1, Math.round(srcH * scale));
-
-      const norm = ((Number(clockwiseDeg) || 0) % 360 + 360) % 360;
-      const isNear = (a, b) => Math.abs(a - b) < 0.75;
-
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-
-      if (isNear(norm, 0) || isNear(norm, 360)) {
-        canvas.width = w; canvas.height = h;
-        ctx.drawImage(source, 0, 0, w, h);
-      } else if (isNear(norm, 90)) {
-        canvas.width = h; canvas.height = w;
-        ctx.translate(h, 0); ctx.rotate(Math.PI / 2);
-        ctx.drawImage(source, 0, 0, w, h);
-      } else if (isNear(norm, 180)) {
-        canvas.width = w; canvas.height = h;
-        ctx.translate(w, h); ctx.rotate(Math.PI);
-        ctx.drawImage(source, 0, 0, w, h);
-      } else if (isNear(norm, 270)) {
-        canvas.width = h; canvas.height = w;
-        ctx.translate(0, w); ctx.rotate(-Math.PI / 2);
-        ctx.drawImage(source, 0, 0, w, h);
-      } else {
-        const rad = (norm * Math.PI) / 180;
-        const cos = Math.abs(Math.cos(rad));
-        const sin = Math.abs(Math.sin(rad));
-        let outW = Math.ceil(w * cos + h * sin);
-        let outH = Math.ceil(w * sin + h * cos);
-        const clamp = Math.min(1, EXPORT_MAX_PX / Math.max(outW, outH));
-        outW = Math.round(outW * clamp);
-        outH = Math.round(outH * clamp);
-        w = Math.round(w * clamp);
-        h = Math.round(h * clamp);
-
-        canvas.width = outW; canvas.height = outH;
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, outW, outH);
-        ctx.translate(outW / 2, outH / 2);
-        ctx.rotate(rad);
-        ctx.drawImage(source, -w / 2, -h / 2, w, h);
-      }
-
-      const outBlob = await new Promise((resolve, reject) => {
-        canvas.toBlob(b => (b ? resolve(b) : reject(new Error("Erreur export JPEG"))), "image/jpeg", EXPORT_QUALITY);
-      });
-      canvas.width = 0;
-      canvas.height = 0;
-      return outBlob;
-    }
-
-    // =====================================================================
-    // GEMINI API (ANNÉE DÉDUITE DE LA FICHE RELÈVE SI OUBLIÉE)
+    // GEMINI : CORRESPONDANCE OPTIMALE DES RELÈVES + ANNÉE/DATE SUR RELÈVE
     // =====================================================================
     function getThinkingConfig(model) {
-      if (model.includes("2.5")) return { thinkingConfig: { thinkingBudget: 0 } };
       if (model.includes("3.5-flash-lite")) return { thinkingConfig: { thinkingLevel: "minimal" } };
       return { thinkingConfig: { thinkingLevel: "low" } };
     }
@@ -1086,7 +1267,6 @@
       properties: {
         is_logbook: { type: "BOOLEAN" },
         is_readable: { type: "BOOLEAN" },
-        doubt_reason: { type: "STRING" },
         rotation_clockwise_deg: { type: "NUMBER" },
         start_day: { type: "INTEGER" },
         start_month: { type: "INTEGER" },
@@ -1094,64 +1274,51 @@
         end_day: { type: "INTEGER" },
         end_month: { type: "INTEGER" },
         end_year: { type: "INTEGER" },
-        shift_type: {
+        shift_type: { type: "STRING", enum: ["Jour", "Nuit", "Jour-et-Nuit", "Inconnu"] },
+        relief_match: {
           type: "STRING",
-          enum: ["Jour", "Nuit", "Jour-et-Nuit", "Inconnu"]
+          enum: [
+            "Chef-de-poste", "Macia", "Godini", "Paladi",
+            "Beroubache", "Besson", "Hernandez", "Potier", "Ranucci",
+            "Autre", "Inconnu"
+          ]
         },
-        is_chief_nicolas_relief: { type: "BOOLEAN" },
-        relief_surname: { type: "STRING" }
+        other_surname: { type: "STRING" }
       },
       required: [
-        "is_logbook",
-        "is_readable",
-        "doubt_reason",
-        "rotation_clockwise_deg",
-        "start_day",
-        "start_month",
-        "start_year",
-        "end_day",
-        "end_month",
-        "end_year",
-        "shift_type",
-        "is_chief_nicolas_relief",
-        "relief_surname"
+        "is_logbook", "is_readable", "rotation_clockwise_deg",
+        "start_day", "start_month", "start_year", "end_day", "end_month", "end_year",
+        "shift_type", "relief_match", "other_surname"
       ]
     };
 
-    const GEMINI_PROMPT = `Analyse cette photo/page de main courante manuscrite de sécurité en France pour l'agent Guillaume BEDOUET.
+    const GEMINI_PROMPT = `Analyse cette photo de main courante manuscrite de sécurité pour l'agent Guillaume BEDOUET.
 
-1) ROTATION (rotation_clockwise_deg) : angle horaire exact (0, 90, 180, 270, ou angle précis si penchée) pour remettre le texte parfaitement horizontal et à l'endroit dans le sens de lecture.
+1) ROTATION (rotation_clockwise_deg) : 0 si déjà à l'endroit dans le sens de lecture, sinon 90/180/270 ou angle exact pour remettre le texte parfaitement horizontal à l'endroit.
 
-2) LISIBILITÉ :
-- is_logbook : true si c'est une main courante de sécurité, false sinon.
-- is_readable : true si le jour, le mois ET l'année (trouvée sur sa vacation OU récupérée sur la fiche/vacation de la relève sur la même photo) sont disponibles (même si le nom de relève est absent/inconnu, garde is_readable = true). Mets is_readable = false uniquement si la photo est floue, hors sujet, ou si le jour, le mois ou l'année sont introuvables partout sur l'image.
-
-3) VACATION & DATES (en France, les dates manuscrites sont JJ/MM/AAAA ou JJ/MM/AA) :
-- Si une double page montre deux vacations, cible la vacation de Guillaume BEDOUET pour start_day, start_month et shift_type.
-- RÈGLE CRUCIALE POUR L'ANNÉE (start_year) : Il arrive souvent que Guillaume BEDOUET ait noté uniquement JJ/MM sans l'année. Si l'année manque sur sa vacation, REGARDE LA FICHE / VACATION DE LA RELÈVE (avant ou après lui sur la même photo ou double page) ou toute autre date présente sur l'image : FIE-TOI À L'ANNÉE ÉCRITE SUR LA FICHE DE LA RELÈVE pour remplir start_year en 4 chiffres (ex: 2025, ou /25 -> 2025, /26 -> 2026). (Uniquement si Guillaume est le 31/12 et la relève du lendemain est 01/01/2026, alors Guillaume est en 2025 ; si la relève de la veille est 31/12/2025 et Guillaume le 01/01, Guillaume est en 2026).
-- end_day, end_month, end_year : date de fin si la vacation est de nuit ou à cheval sur 2 jours (ex: du 06 au 07/04/2026 -> start_day=6, end_day=7). Pour une vacation de Jour sur une seule journée, mets end_day=0, end_month=0, end_year=0.
+2) DATES & VACATION (dates françaises JJ/MM/AAAA ou JJ/MM/AA) :
+- Cible la vacation de Guillaume BEDOUET (si double page).
+- RÈGLE IMPÉRATIVE SUR L'ANNÉE ET LA DATE :
+  * Il arrive souvent que Guillaume BEDOUET ait oublié l'année (ex: juste "06/04") ou même toute la date sur sa main courante.
+  * REGARDE SYSTÉMATIQUEMENT LA MAIN COURANTE / FICHE DE LA RELÈVE présente sur la même photo (avant ou après lui) :
+    - Si l'année est écrite sur la main courante de la relève (ex: 2024, 2025, 2026 ou /24, /25, /26), PRENDS CETTE ANNÉE pour dater la vacation de Guillaume (attention uniquement au passage 31/12 ➔ 01/01).
+    - Si même le jour/mois manque sur la main courante de Guillaume mais figure sur la main courante de la relève, déduis exactement la date de Guillaume à partir de la date de la relève (même jour ou veille/lendemain selon prise ou fin de service).
+- start_day, start_month, start_year (en 4 chiffres ex: 2025), end_day, end_month, end_year (0 si vacation de Jour sur 1 jour).
 - shift_type : "Jour", "Nuit", "Jour-et-Nuit", ou "Inconnu".
 
-4) RELÈVE (is_chief_nicolas_relief et relief_surname) :
-- La relève peut être soit l'agent qui assure la relève après mon service, soit l'agent relevé avant ma prise de service. Ne jamais mettre Guillaume BEDOUET lui-même.
-- Si c'est le chef de poste (noté "chef de poste", "CDP", ou "Nicolas") qui fait la relève, mets is_chief_nicolas_relief = true et relief_surname = "".
-- Sinon, mets is_chief_nicolas_relief = false et extrais uniquement le NOM DE FAMILLE de l'agent de relève (ex: "Nepotu").
-- En cas de doute, d'écriture illisible ou d'absence de mention de relève, laisse is_chief_nicolas_relief = false et relief_surname = "" (ne devine jamais).`;
-
-    function parseRetryDelayMs(errJson, rawText) {
-      try {
-        const details = errJson?.error?.details || [];
-        for (const d of details) {
-          if (d.retryDelay) {
-            const sec = parseFloat(String(d.retryDelay).replace("s", ""));
-            if (!Number.isNaN(sec)) return Math.min(65000, Math.ceil((sec + 1) * 1000));
-          }
-        }
-      } catch {}
-      const m = rawText.match(/retry in\s+([\d.]+)s/i);
-      if (m) return Math.min(65000, Math.ceil((parseFloat(m[1]) + 1) * 1000));
-      return null;
-    }
+3) AGENT DE RELÈVE (relève après mon service OU agent relevé avant ma prise de service — ne jamais choisir Guillaume BEDOUET) :
+Fais la MEILLEURE correspondance possible (même si l'écriture manuscrite est imparfaite ou partielle) parmi cette liste officielle :
+- "Chef-de-poste" : Nicolas, Chef de Nicolas, Chef de poste, CDP.
+- "Macia" : Didier Macia (Didier, Macia, Massia).
+- "Godini" : Laurent Godini (Laurent, Godini, Gaudini).
+- "Paladi" : Vasile Paladi (Vasile, Paladi, Palladi).
+- "Beroubache" : Anthony Beroubache (Anthony, Beroubache, Beroubach, Berrouache).
+- "Besson" : Cédric Besson (Cédric, Besson).
+- "Hernandez" : Adrien Hernandez (Adrien Hernandez, Hernadez, Ernandez).
+- "Potier" : Florian Potier (Florian, Potier, Pottier).
+- "Ranucci" : Adrien Ranucci (Adrien Ranucci, Ranuci).
+- "Autre" : uniquement si un autre nom de famille clairement différent est lisible (mets-le dans other_surname).
+- "Inconnu" : uniquement si aucune mention de relève n'est présente ou si c'est totalement illisible.`;
 
     async function analyzeWithGemini(base64Thumb, geminiKey, model) {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
@@ -1172,10 +1339,7 @@
       for (let attempt = 0; attempt < 4; attempt++) {
         const res = await fetch(endpoint, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": geminiKey
-          },
+          headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
           body: JSON.stringify(payload)
         });
 
@@ -1191,259 +1355,273 @@
         try { errJson = JSON.parse(errText); } catch {}
         const cleanMsg = errJson?.error?.message || errText;
 
-        if (/limit:\s*0\b/i.test(cleanMsg)) {
-          const err = new Error(`Quota Gemini à 0 (limit: 0). Activez la facturation sur aistudio.google.com ou créez une clé avec quota actif. Détail : ${cleanMsg}`);
-          err.isFatalApi = true;
-          throw err;
-        }
-
-        if ((res.status === 429 || res.status === 503) && attempt < 3) {
-          const waitMs = parseRetryDelayMs(errJson, cleanMsg) || [4000, 12000, 30000][attempt];
-          setProgressStatus(`⏳ Quota temporaire (${res.status}), pause de ${Math.round(waitMs / 1000)}s...`);
-          await sleep(waitMs);
+        if ((res.status === 429 || res.status === 503) && attempt < 3 && !/limit:\s*0\b/i.test(cleanMsg)) {
+          await sleep([3000, 10000, 25000][attempt]);
           continue;
         }
-
         const err = new Error(`Gemini (${res.status}): ${cleanMsg}`);
-        err.isFatalApi = [400, 401, 403, 404, 429].includes(res.status);
+        err.isFatalApi = [400, 401, 402, 403, 404, 429].includes(res.status);
         throw err;
       }
     }
 
     // =====================================================================
-    // NOMMAGE EXACT :
-    //   Nuit : 04-06_au_07_2026_Nuit_Releve-Nepotu.jpg
-    //   Jour : 04-06_2026_Jour_Releve-Nepotu.jpg
-    //   CDP  : ..._Releve-Chef-de-poste-Nicolas.jpg
-    //   Doute: ..._Releve-Inconnu.jpg
+    // CANVAS
     // =====================================================================
-    const pad2 = n => String(n).padStart(2, "0");
-
-    function sanitizePart(str) {
-      return (str || "").replace(/[\/\\:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
+    async function decodeImageBlob(blob) {
+      try {
+        const bmp = await createImageBitmap(blob);
+        return { source: bmp, width: bmp.width, height: bmp.height, close: () => bmp.close() };
+      } catch {
+        const url = URL.createObjectURL(blob);
+        const img = await new Promise((resolve, reject) => {
+          const el = new Image();
+          el.onload = () => resolve(el);
+          el.onerror = () => reject(new Error("Image illisible"));
+          el.src = url;
+        });
+        return { source: img, width: img.naturalWidth, height: img.naturalHeight, close: () => URL.revokeObjectURL(url) };
+      }
     }
 
-    function stripAccents(str) {
-      return (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    function makeThumbBase64(source, srcW, srcH) {
+      const scale = Math.min(1, THUMB_MAX_PX / Math.max(srcW, srcH));
+      const w = Math.max(1, Math.round(srcW * scale));
+      const h = Math.max(1, Math.round(srcH * scale));
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(source, 0, 0, w, h);
+      const b64 = c.toDataURL("image/jpeg", THUMB_QUALITY).split(",")[1];
+      c.width = 0; c.height = 0;
+      return b64;
     }
 
-    function formatSurnameForFilename(raw) {
-      const cleaned = sanitizePart(raw);
-      if (!cleaned) return "";
-      return cleaned
-        .toLowerCase()
-        .replace(/(^|[\s-])([a-zàâäéèêëîïôöùûüç])/g, (m, sep, ch) => sep + ch.toUpperCase())
-        .replace(/\s+/g, "-");
+    async function rotateAndExportJpeg(source, srcW, srcH, deg) {
+      const scale = Math.min(1, EXPORT_MAX_PX / Math.max(srcW, srcH));
+      let w = Math.max(1, Math.round(srcW * scale));
+      let h = Math.max(1, Math.round(srcH * scale));
+      const norm = ((Number(deg) || 0) % 360 + 360) % 360;
+      const near = (a, b) => Math.abs(a - b) < 0.75;
+
+      const c = document.createElement("canvas");
+      const ctx = c.getContext("2d");
+
+      if (near(norm, 0) || near(norm, 360)) {
+        c.width = w; c.height = h; ctx.drawImage(source, 0, 0, w, h);
+      } else if (near(norm, 90)) {
+        c.width = h; c.height = w; ctx.translate(h, 0); ctx.rotate(Math.PI / 2); ctx.drawImage(source, 0, 0, w, h);
+      } else if (near(norm, 180)) {
+        c.width = w; c.height = h; ctx.translate(w, h); ctx.rotate(Math.PI); ctx.drawImage(source, 0, 0, w, h);
+      } else if (near(norm, 270)) {
+        c.width = h; c.height = w; ctx.translate(0, w); ctx.rotate(-Math.PI / 2); ctx.drawImage(source, 0, 0, w, h);
+      } else {
+        const rad = (norm * Math.PI) / 180;
+        const cos = Math.abs(Math.cos(rad)), sin = Math.abs(Math.sin(rad));
+        let outW = Math.ceil(w * cos + h * sin), outH = Math.ceil(w * sin + h * cos);
+        const cl = Math.min(1, EXPORT_MAX_PX / Math.max(outW, outH));
+        outW = Math.round(outW * cl); outH = Math.round(outH * cl);
+        w = Math.round(w * cl); h = Math.round(h * cl);
+        c.width = outW; c.height = outH;
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, outW, outH);
+        ctx.translate(outW / 2, outH / 2); ctx.rotate(rad); ctx.drawImage(source, -w / 2, -h / 2, w, h);
+      }
+
+      const blob = await new Promise((res, rej) => c.toBlob(b => (b ? res(b) : rej(new Error("Erreur JPEG"))), "image/jpeg", EXPORT_QUALITY));
+      c.width = 0; c.height = 0;
+      return blob;
     }
 
-    function normalizeYear(y) {
-      if (Number.isInteger(y) && y >= 20 && y <= 30) return 2000 + y;
-      return y;
-    }
-
-    function isValidDate(y, m, d) {
-      if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return false;
-      if (y < 2020 || y > 2030 || m < 1 || m > 12 || d < 1 || d > 31) return false;
-      const dt = new Date(Date.UTC(y, m - 1, d));
-      return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
-    }
-
-    function buildDateSegment(analysis) {
-      const sy = normalizeYear(analysis.start_year);
-      const sm = analysis.start_month;
-      const sd = analysis.start_day;
-
-      let ey = normalizeYear(analysis.end_year);
-      let em = analysis.end_month;
-      let ed = analysis.end_day;
-
+    // =====================================================================
+    // CONSTRUCTION DU NOM FINAL & PLACEMENT (ANNÉE/MOIS OU DOUBLONS)
+    // =====================================================================
+    function buildDateSegment(sy, sm, sd, ey, em, ed, shiftType) {
       let hasEnd = isValidDate(ey, em, ed) && (ey !== sy || em !== sm || ed !== sd);
-      if (!hasEnd && (analysis.shift_type === "Nuit" || analysis.shift_type === "Jour-et-Nuit")) {
+      if (!hasEnd && (shiftType === "Nuit" || shiftType === "Jour-et-Nuit")) {
         if (ed >= 1 && ed <= 31 && ed !== sd && isValidDate(sy, sm, ed)) {
           ey = sy; em = sm; hasEnd = true;
         } else {
           const next = new Date(Date.UTC(sy, sm - 1, sd + 1));
-          ey = next.getUTCFullYear();
-          em = next.getUTCMonth() + 1;
-          ed = next.getUTCDate();
+          ey = next.getUTCFullYear(); em = next.getUTCMonth() + 1; ed = next.getUTCDate();
           hasEnd = true;
         }
       }
-
-      if (!hasEnd) {
-        return `${pad2(sm)}-${pad2(sd)}_${sy}`;
-      }
-      if (ey === sy && em === sm) {
-        return `${pad2(sm)}-${pad2(sd)}_au_${pad2(ed)}_${sy}`;
-      }
-      if (ey === sy) {
-        return `${pad2(sm)}-${pad2(sd)}_au_${pad2(em)}-${pad2(ed)}_${sy}`;
-      }
+      if (!hasEnd) return `${pad2(sm)}-${pad2(sd)}_${sy}`;
+      if (ey === sy && em === sm) return `${pad2(sm)}-${pad2(sd)}_au_${pad2(ed)}_${sy}`;
+      if (ey === sy) return `${pad2(sm)}-${pad2(sd)}_au_${pad2(em)}-${pad2(ed)}_${sy}`;
       return `${pad2(sm)}-${pad2(sd)}_${sy}_au_${pad2(em)}-${pad2(ed)}_${ey}`;
     }
 
-    function buildReliefSegment(analysis) {
-      if (analysis.is_chief_nicolas_relief === true) {
-        return "Releve-Chef-de-poste-Nicolas";
+    async function placeFileInDefinitive(sourceFile, meta, rotatedBlob) {
+      const dstRootId = state.dstFolder.id;
+
+      if (!isValidDate(meta.sy, meta.sm, meta.sd)) {
+        const verifId = await ensureSubfolder(dstRootId, "À vérifier");
+        const finalName = await resolveUniqueFilename(verifId, sourceFile.name);
+        const up = rotatedBlob
+          ? await uploadJpegToDrive(rotatedBlob, finalName, verifId)
+          : await driveCopyFile(sourceFile.id, finalName, verifId);
+        return {
+          status: "check",
+          destPath: `À vérifier / ${up.name || finalName}`,
+          webViewLink: up.webViewLink || ""
+        };
       }
 
-      const raw = sanitizePart(analysis.relief_surname);
-      const low = stripAccents(raw).toLowerCase();
+      const datePart = buildDateSegment(meta.sy, meta.sm, meta.sd, meta.ey, meta.em, meta.ed, meta.shiftType);
+      const shiftPart = ["Jour", "Nuit", "Jour-et-Nuit"].includes(meta.shiftType) ? meta.shiftType : "Vacation-Inconnue";
+      const targetName = `${datePart}_${shiftPart}_Releve-${meta.reliefCanonical}.jpg`;
+      const shiftKey = buildShiftKey(meta.sy, meta.sm, meta.sd, shiftPart);
 
-      if (!raw || low === "inconnu" || low === "inconnue" || low.includes("bedouet") || low === "guillaume") {
-        return "Releve-Inconnu";
-      }
-      if (low.includes("chef de poste") || low === "cdp" || /\bcdp\b/.test(low) || low === "nicolas") {
-        return "Releve-Chef-de-poste-Nicolas";
-      }
+      const prev = state.shiftLocks[shiftKey] || Promise.resolve();
+      const task = prev.then(async () => {
+        const existing = state.destShifts[shiftKey];
 
-      const formatted = formatSurnameForFilename(raw);
-      return formatted ? `Releve-${formatted}` : "Releve-Inconnu";
-    }
+        if (existing) {
+          const doublonsId = await ensureSubfolder(dstRootId, "Doublons");
 
-    function buildClassification(analysis, originalLabel) {
-      const startYear = normalizeYear(analysis.start_year);
-      const normalized = { ...analysis, start_year: startYear };
-      const startDateOk = isValidDate(startYear, analysis.start_month, analysis.start_day);
+          if (!existing.isKnownRelief && meta.isKnownRelief) {
+            const dupName = await resolveUniqueFilename(doublonsId, existing.name);
+            await driveMoveFile(existing.fileId, existing.folderId, doublonsId, dupName);
+            state.folderFilesCache[existing.folderId]?.delete(existing.name);
 
-      if (analysis.is_logbook && analysis.is_readable && startDateOk) {
-        const datePart = buildDateSegment(normalized);
-        const shiftPart = ["Jour", "Nuit", "Jour-et-Nuit"].includes(analysis.shift_type)
-          ? analysis.shift_type
-          : "Vacation-Inconnue";
-        const reliefPart = buildReliefSegment(analysis);
+            const betterName = await resolveUniqueFilename(existing.folderId, targetName);
+            const up = rotatedBlob
+              ? await uploadJpegToDrive(rotatedBlob, betterName, existing.folderId)
+              : await driveCopyFile(sourceFile.id, betterName, existing.folderId);
+
+            state.destShifts[shiftKey] = {
+              fileId: up.id,
+              folderId: existing.folderId,
+              name: up.name || betterName,
+              isKnownRelief: true
+            };
+            return {
+              status: "ok",
+              destPath: `${meta.sy} / ${MONTH_FOLDERS[meta.sm]} / ${up.name || betterName} (remplacé Inconnu ➔ Doublons)`,
+              webViewLink: up.webViewLink || ""
+            };
+          }
+
+          const dupName = await resolveUniqueFilename(doublonsId, targetName);
+          const up = rotatedBlob
+            ? await uploadJpegToDrive(rotatedBlob, dupName, doublonsId)
+            : await driveCopyFile(sourceFile.id, dupName, doublonsId);
+
+          return {
+            status: "dup",
+            destPath: `Doublons / ${up.name || dupName}`,
+            webViewLink: up.webViewLink || ""
+          };
+        }
+
+        const yearId = await ensureSubfolder(dstRootId, String(meta.sy));
+        const monthFolderName = MONTH_FOLDERS[meta.sm];
+        const monthId = await ensureSubfolder(yearId, monthFolderName, meta.sm);
+
+        const finalName = await resolveUniqueFilename(monthId, targetName);
+        const up = rotatedBlob
+          ? await uploadJpegToDrive(rotatedBlob, finalName, monthId)
+          : await driveCopyFile(sourceFile.id, finalName, monthId);
+
+        state.destShifts[shiftKey] = {
+          fileId: up.id,
+          folderId: monthId,
+          name: up.name || finalName,
+          isKnownRelief: meta.isKnownRelief
+        };
 
         return {
           status: "ok",
-          targetFolderName: String(startYear),
-          desiredFilename: `${datePart}_${shiftPart}_${reliefPart}.jpg`,
-          reason: ""
+          destPath: `${meta.sy} / ${monthFolderName} / ${up.name || finalName}`,
+          webViewLink: up.webViewLink || ""
         };
-      }
+      });
 
-      let reason = sanitizePart(analysis.doubt_reason);
-      if (!reason) {
-        if (!analysis.is_logbook) reason = "Pas une main courante";
-        else if (!startDateOk) reason = "Date illisible";
-        else reason = "À vérifier";
-      }
-
-      const baseOriginal = sanitizePart(originalLabel.replace(/\.(jpe?g|png|pdf)$/i, ""));
-      return {
-        status: "check",
-        targetFolderName: "À vérifier",
-        desiredFilename: `${reason} - ${baseOriginal}.jpg`,
-        reason
-      };
+      state.shiftLocks[shiftKey] = task.catch(() => {});
+      return task;
     }
 
     // =====================================================================
-    // TRAITEMENT FICHIER (IMAGE OU PDF)
+    // TRAITEMENT D'UN FICHIER
     // =====================================================================
-    async function classifyAndUploadSurface(surface, w, h, labelName, sourceFile, rootFolderId, geminiKey, model) {
-      const thumbB64 = canvasToThumbBase64(surface, w, h);
-      const analysis = await analyzeWithGemini(thumbB64, geminiKey, model);
-      const decision = buildClassification(analysis, labelName);
-      const rotatedBlob = await rotateAndExportJpeg(surface, w, h, analysis.rotation_clockwise_deg);
+    async function processClassifiedFile(file, mode, geminiKey, model) {
+      const p = file.parsed;
+      const parsedRel = p ? canonicalizeRelief(p.reliefRaw) : { canonical: "Inconnu", inRoster: false, known: false };
 
-      const targetFolderId = await ensureSubfolder(rootFolderId, decision.targetFolderName);
-      const finalName = await resolveUniqueFilename(targetFolderId, decision.desiredFilename);
-      const uploaded = await uploadJpegToDrive(rotatedBlob, finalName, targetFolderId);
+      const needGemini =
+        mode === "all_gemini" ||
+        (mode === "smart" && (file.fromVerify || !p || !isValidDate(p.startYear, p.startMonth, p.startDay) || !parsedRel.inRoster));
 
-      return {
-        originalName: labelName,
-        sourcePath: sourceFile.folderPath || "",
-        targetName: uploaded.name || finalName,
-        targetFolder: decision.targetFolderName,
-        status: decision.status,
-        rotationDeg: analysis.rotation_clockwise_deg,
-        webViewLink: uploaded.webViewLink || "",
-        processedAt: new Date().toISOString()
-      };
-    }
+      let meta = null;
+      let rotatedBlob = null;
 
-    async function processSingleFile(file, rootFolderId, geminiKey, model) {
-      const dlRes = await driveFetch(
-        `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&supportsAllDrives=true`
-      );
-      const origBlob = await dlRes.blob();
-
-      if (file.isPdf) {
-        if (!window.pdfjsLib) throw new Error("PDF.js non chargé (vérifiez votre connexion).");
-        const arrayBuf = await origBlob.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
-        let lastEntry = null;
-
-        try {
-          for (let p = 1; p <= pdf.numPages; p++) {
-            const page = await pdf.getPage(p);
-            const baseVp = page.getViewport({ scale: 1 });
-            const scale = Math.min(3, EXPORT_MAX_PX / Math.max(baseVp.width, baseVp.height));
-            const vp = page.getViewport({ scale });
-
-            const pageCanvas = document.createElement("canvas");
-            pageCanvas.width = Math.round(vp.width);
-            pageCanvas.height = Math.round(vp.height);
-            const ctx = pageCanvas.getContext("2d");
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-
-            await page.render({ canvasContext: ctx, viewport: vp }).promise;
-            const pageLabel = pdf.numPages > 1
-              ? `${file.name.replace(/\.pdf$/i, "")}_p${p}.pdf`
-              : file.name;
-
-            lastEntry = await classifyAndUploadSurface(
-              pageCanvas,
-              pageCanvas.width,
-              pageCanvas.height,
-              pageLabel,
-              file,
-              rootFolderId,
-              geminiKey,
-              model
-            );
-
-            pageCanvas.width = 0;
-            pageCanvas.height = 0;
-            page.cleanup();
-          }
-        } finally {
-          await pdf.destroy();
-        }
-
-        state.processedMap[file.id] = {
-          fileId: file.id,
-          ...(lastEntry || {
-            originalName: file.name,
-            targetName: file.name,
-            targetFolder: "À vérifier",
-            status: "check",
-            rotationDeg: 0,
-            processedAt: new Date().toISOString()
-          }),
-          pagesCount: pdf.numPages
-        };
-      } else {
+      if (needGemini) {
+        const dlRes = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&supportsAllDrives=true`);
+        const origBlob = await dlRes.blob();
         const decoded = await decodeImageBlob(origBlob);
-        let entry;
+
         try {
-          entry = await classifyAndUploadSurface(
-            decoded.source,
-            decoded.width,
-            decoded.height,
-            file.name,
-            file,
-            rootFolderId,
-            geminiKey,
-            model
-          );
+          const b64 = makeThumbBase64(decoded.source, decoded.width, decoded.height);
+          const ai = await analyzeWithGemini(b64, geminiKey, model);
+
+          const aiStartYear = normalizeYear(ai.start_year);
+          const aiEndYear = normalizeYear(ai.end_year);
+          const aiDateOk = isValidDate(aiStartYear, ai.start_month, ai.start_day);
+          const pDateOk = p && isValidDate(p.startYear, p.startMonth, p.startDay);
+
+          const sy = aiDateOk ? aiStartYear : (pDateOk ? normalizeYear(p.startYear) : 0);
+          const sm = aiDateOk ? ai.start_month : (pDateOk ? p.startMonth : 0);
+          const sd = aiDateOk ? ai.start_day : (pDateOk ? p.startDay : 0);
+          const ey = aiDateOk ? aiEndYear : (pDateOk ? normalizeYear(p.endYear) : 0);
+          const em = aiDateOk ? ai.end_month : (pDateOk ? p.endMonth : 0);
+          const ed = aiDateOk ? ai.end_day : (pDateOk ? p.endDay : 0);
+
+          const shiftType = ["Jour", "Nuit", "Jour-et-Nuit"].includes(ai.shift_type)
+            ? ai.shift_type
+            : (p?.shiftType || "Vacation-Inconnue");
+
+          const aiRelRaw = ai.relief_match === "Autre" ? ai.other_surname : ai.relief_match;
+          const aiRel = canonicalizeRelief(aiRelRaw);
+          const bestRel = aiRel.inRoster ? aiRel : (parsedRel.inRoster ? parsedRel : (aiRel.known ? aiRel : parsedRel));
+
+          const deg = ((Number(ai.rotation_clockwise_deg) || 0) % 360 + 360) % 360;
+          if (deg > 0.75 && deg < 359.25) {
+            rotatedBlob = await rotateAndExportJpeg(decoded.source, decoded.width, decoded.height, deg);
+          }
+
+          meta = {
+            sy, sm, sd, ey, em, ed, shiftType,
+            reliefCanonical: bestRel.canonical,
+            isKnownRelief: bestRel.known
+          };
         } finally {
           decoded.close();
         }
-        state.processedMap[file.id] = { fileId: file.id, ...entry };
+      } else {
+        meta = {
+          sy: p ? normalizeYear(p.startYear) : 0,
+          sm: p ? p.startMonth : 0,
+          sd: p ? p.startDay : 0,
+          ey: p ? normalizeYear(p.endYear) : 0,
+          em: p ? p.endMonth : 0,
+          ed: p ? p.endDay : 0,
+          shiftType: p ? p.shiftType : "Vacation-Inconnue",
+          reliefCanonical: parsedRel.canonical,
+          isKnownRelief: parsedRel.known
+        };
       }
 
+      const placed = await placeFileInDefinitive(file, meta, rotatedBlob);
+
+      state.processedMap[file.id] = {
+        fileId: file.id,
+        originalName: file.name,
+        sourcePath: file.folderPath || "",
+        destPath: placed.destPath,
+        status: placed.status,
+        webViewLink: placed.webViewLink,
+        processedAt: new Date().toISOString()
+      };
       saveProcessedMap();
       renderStats();
       renderLogs();
@@ -1451,8 +1629,10 @@
 
     async function startProcessing(singleTest = false) {
       const cfg = saveConfig(true);
-      if (!cfg.geminiKey) return alert("Renseignez votre clé API Gemini.");
-      if (!state.selectedFolder) return alert("Sélectionnez le dossier Drive.");
+      if (cfg.stage2Mode !== "name_only" && !cfg.geminiKey) {
+        return alert("Renseignez votre clé API Gemini (ou choisissez 'Copie sans Gemini').");
+      }
+      if (!state.srcFolder || !state.dstFolder) return alert("Sélectionnez source et destination.");
 
       const queue = getRemainingFiles();
       if (queue.length === 0) return alert("Aucun fichier restant !");
@@ -1463,61 +1643,58 @@
       updateControlButtons();
       renderLogs();
 
-      const rootFolderId = state.selectedFolder.id;
-      const toProcess = singleTest ? queue.slice(0, 1) : queue;
-      const total = toProcess.length;
-      const isFreeMode = cfg.speed === "free";
-      const batchSize = isFreeMode ? 1 : 5;
-      let errorCount = 0;
-
       try {
-        for (let i = 0; i < total; i += batchSize) {
+        await indexExistingDestShifts();
+
+        const toProcess = singleTest ? queue.slice(0, 1) : queue;
+        const total = toProcess.length;
+        let errCount = 0;
+
+        for (let i = 0; i < total; i += BATCH_SIZE) {
           if (state.isPaused) {
             setProgressStatus("⏸️ En pause — progression sauvegardée.");
             break;
           }
 
-          const batch = toProcess.slice(i, i + batchSize);
+          const batch = toProcess.slice(i, i + BATCH_SIZE);
           const endIdx = Math.min(i + batch.length, total);
-          setProgressStatus(`⚡ ${isFreeMode ? "Mode gratuit" : "Lot"} ${i + 1}–${endIdx} / ${total} (${cfg.model})...`);
+          setProgressStatus(`⚡ Transfert ${i + 1}–${endIdx} / ${total}...`);
 
           const results = await Promise.allSettled(
-            batch.map(file => processSingleFile(file, rootFolderId, cfg.geminiKey, cfg.model))
+            batch.map(f => processClassifiedFile(f, cfg.stage2Mode, cfg.geminiKey, cfg.model))
           );
 
-          let fatalApiError = null;
+          let fatalErr = null;
           results.forEach((res, idx) => {
             if (res.status === "rejected") {
-              errorCount++;
-              const errObj = res.reason;
-              const msg = errObj?.message || String(errObj);
+              errCount++;
+              const msg = res.reason?.message || String(res.reason);
               state.recentErrors.unshift({
                 originalName: batch[idx].name,
                 message: msg,
                 processedAt: new Date().toISOString()
               });
-              if (errObj?.isFatalApi) fatalApiError = msg;
+              if (res.reason?.isFatalApi) fatalErr = msg;
             }
           });
           renderLogs();
 
-          if (fatalApiError) {
-            setProgressStatus("❌ Arrêt : erreur API Gemini (voir Journal ci-dessous)");
+          if (fatalErr) {
+            setProgressStatus("❌ Arrêt : erreur API Gemini (voir Journal)");
             break;
-          }
-
-          if (isFreeMode && !state.isPaused && i + batchSize < total) {
-            await sleep(5000);
           }
         }
 
         if (!state.isPaused && !document.getElementById("progressStatus").textContent.startsWith("❌")) {
           setProgressStatus(
-            errorCount > 0
-              ? `⚠️ Terminé avec ${errorCount} erreur(s) — voir le Journal`
-              : (singleTest ? "✅ Test 1 fichier terminé !" : "✅ Tous les fichiers ont été traités !")
+            errCount > 0
+              ? `⚠️ Terminé avec ${errCount} erreur(s)`
+              : (singleTest ? "✅ Test 1 fichier terminé !" : "✅ Classement définitif terminé !")
           );
         }
+      } catch (err) {
+        alert("Erreur : " + err.message);
+        setProgressStatus("❌ Erreur : " + err.message);
       } finally {
         state.isRunning = false;
         state.isPaused = false;
@@ -1531,7 +1708,7 @@
       state.isPaused = true;
       const btn = document.getElementById("pauseBtn");
       btn.disabled = true;
-      btn.textContent = "⏳ Fin en cours...";
+      btn.textContent = "⏳ Fin du lot en cours...";
     }
 
     function updateControlButtons() {
@@ -1554,7 +1731,7 @@
         testBtn.classList.remove("hidden");
         startBtn.disabled = remaining === 0;
         testBtn.disabled = remaining === 0;
-        scanBtn.disabled = !state.accessToken || !state.selectedFolder;
+        scanBtn.disabled = !(state.accessToken && state.srcFolder && state.dstFolder);
       }
     }
 
@@ -1567,23 +1744,23 @@
 
     function renderStats() {
       const total = state.sourceFiles.length;
-      const sourceIds = new Set(state.sourceFiles.map(f => f.id));
+      const srcIds = new Set(state.sourceFiles.map(f => f.id));
 
-      let okCount = 0, checkCount = 0, doneInSource = 0;
+      let okCount = 0, dupCount = 0, doneInSrc = 0;
       for (const e of Object.values(state.processedMap)) {
         if (e.status === "ok") okCount++;
-        else checkCount++;
-        if (sourceIds.has(e.fileId)) doneInSource++;
+        else if (e.status === "dup") dupCount++;
+        if (srcIds.has(e.fileId)) doneInSrc++;
       }
 
-      const remaining = Math.max(0, total - doneInSource);
-      const pct = total > 0 ? Math.round((doneInSource / total) * 100) : 0;
+      const remaining = Math.max(0, total - doneInSrc);
+      const pct = total > 0 ? Math.round((doneInSrc / total) * 100) : 0;
 
       document.getElementById("statTotal").textContent = total;
       document.getElementById("statOk").textContent = okCount;
-      document.getElementById("statCheck").textContent = checkCount;
+      document.getElementById("statDup").textContent = dupCount;
       document.getElementById("statRemaining").textContent = remaining;
-      document.getElementById("progressCount").textContent = `${doneInSource} / ${total} (${pct}%)`;
+      document.getElementById("progressCount").textContent = `${doneInSrc} / ${total} (${pct}%)`;
       document.getElementById("progressFill").style.width = `${pct}%`;
       document.getElementById("historyInfo").textContent = `${Object.keys(state.processedMap).length} en mémoire`;
     }
@@ -1607,17 +1784,16 @@
       }
 
       const okHtml = entries.map(e => {
-        const cls = e.status === "ok" ? "ok" : "check";
-        const icon = e.status === "ok" ? "✅" : "⚠️";
+        const cls = e.status === "ok" ? "ok" : (e.status === "dup" ? "dup" : "check");
+        const icon = e.status === "ok" ? "✅" : (e.status === "dup" ? "♊" : "⚠️");
         const link = e.webViewLink ? `<a href="${escapeHtml(e.webViewLink)}" target="_blank" rel="noopener">Ouvrir ↗</a>` : "";
-        const src = e.sourcePath ? `${e.sourcePath}/` : "";
         return `
           <div class="log-item ${cls}">
             <div class="log-top">
-              <span>${icon} ${escapeHtml(e.targetFolder)} / ${escapeHtml(e.targetName)}</span>
+              <span>${icon} ${escapeHtml(e.destPath)}</span>
               ${link}
             </div>
-            <div class="log-sub">${escapeHtml(src + e.originalName)} • ${e.rotationDeg}°</div>
+            <div class="log-sub">Source : ${escapeHtml((e.sourcePath ? e.sourcePath + "/" : "") + e.originalName)}</div>
           </div>
         `;
       }).join("");
@@ -1627,10 +1803,8 @@
 
     function escapeHtml(str) {
       return String(str || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
     const sleep = ms => new Promise(r => setTimeout(r, ms));
